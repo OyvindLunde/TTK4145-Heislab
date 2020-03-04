@@ -1,6 +1,9 @@
 package orderhandler
 
 import (
+	"fmt"
+	"math"
+
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
@@ -13,9 +16,8 @@ func InitOrderHandler(port int) { //Overflødig per nå
 }
 
 // GetDestination returns the floor the elevator should go to
-func GetDestination(order logmanagement.Order) int { //Overflødig per nå
-	order = GetPendingOrder()
-	if order.Active != -1 {
+func GetDestination(order logmanagement.Order) int {
+	if order.Active == 0 {
 		return order.Floor
 	}
 	return -1
@@ -35,7 +37,7 @@ func GetPendingOrder() logmanagement.Order {
 
 //Annet navn enn Get?
 // GetMotorDirection returns which direction the elevator should move
-func GetMotorDirection(currentfloor int, destination int) int {
+func GetDirection(currentfloor int, destination int) int {
 	if destination == -1 || destination == currentfloor {
 		return 0
 	} else if destination > currentfloor {
@@ -54,8 +56,8 @@ func GetMotorDirection(currentfloor int, destination int) int {
 }*/
 
 // ShouldElevatorStop determines if the elevator should stop when it reaches a floor
-func ShouldElevatorStop(currentfloor int, destination int) bool {
-	dir := GetMotorDirection(currentfloor, destination)
+func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.Elev, elevlist []logmanagement.Elev) bool {
+	dir := GetDirection(currentfloor, destination)
 	if dir == 0 {
 		return true
 	}
@@ -63,48 +65,87 @@ func ShouldElevatorStop(currentfloor int, destination int) bool {
 		// Update order queue?
 		return true
 	}
-	if logmanagement.GetOrder(currentfloor, 1).Active == 0 && dir == -1 {
+	if logmanagement.GetOrder(currentfloor, 1).Active == 0 && dir == -1 && ShouldITakeOrder(logmanagement.GetOrder(currentfloor, 1), elev, destination, elevlist) {
 		return true
 	}
-	if logmanagement.GetOrder(currentfloor, 0).Active == 0 && dir == 1 {
+	if logmanagement.GetOrder(currentfloor, 0).Active == 0 && dir == 1 && ShouldITakeOrder(logmanagement.GetOrder(currentfloor, 0), elev, destination, elevlist) {
 		return true
 	}
 
 	return false
+
 }
 
 func ClearOrdersAtFloor(floor int) {
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??
-		logmanagement.UpdateOrderQueue(floor, i, -1)
+		UpdateOrderQueue(floor, i, -1)
 		elevio.SetButtonLamp(elevio.ButtonType(i), floor, false)
 	}
 }
 
-func HandleButtonEvents() {
+func HandleButtonEvents(floor *int) {
 	ButtonPress := make(chan elevcontroller.Button)
 	FloorReached := make(chan int)
 
-	go elevcontroller.ButtonPressed(ButtonPress)
-	go elevcontroller.FloorIsReached(FloorReached)
-
 	for {
+		elevcontroller.ButtonPressed(ButtonPress)
+		elevcontroller.FloorIsReached(FloorReached)
+		fmt.Println("In: HandleButtonEvents")
 		select {
 		case a := <-ButtonPress:
+			fmt.Println("Button pressed")
 			order := logmanagement.GetOrder(a.Floor, a.Type)
 			if order.Active == -1 {
-				logmanagement.UpdateOrderQueue(order.Floor, int(order.ButtonType), 0)
+				UpdateOrderQueue(order.Floor, int(order.ButtonType), 0)
 				elevcontroller.UpdateLight(elevcontroller.Button{Floor: order.Floor, Type: int(order.ButtonType)}, true)
 			}
 		case a := <-FloorReached:
-
+			*floor = a
+			elevcontroller.UpdateFloorIndicator(*floor)
 		}
 	}
 }
 
-func ShouldElevatorExecuteOrder() int {
-	order := logmanagement.GetPendingOrder()
-	if order.Active == 0 {
-		return order.Floor
+func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, destination int, elevlist []logmanagement.Elev) bool {
+	if destination == -1 || order.Active == -1 {
+		return false
 	}
-	return -1
+	conflictElevs := []logmanagement.Elev{}
+	for _, elev := range elevlist {
+		_, _, currentOrder, _ := logmanagement.GetElevInfo(elev)
+		if order == currentOrder {
+			conflictElevs = append(conflictElevs, elev)
+		}
+	}
+	if len(conflictElevs) != 0 {
+		return solveConflict(order, elev, destination, conflictElevs)
+	}
+	return true
+}
+
+func solveConflict(order logmanagement.Order, elev logmanagement.Elev, destination int, conflictElevs []logmanagement.Elev) bool {
+	id, floor, _, _ := logmanagement.GetElevInfo(elev)
+	myDist := math.Abs(float64(floor - destination))
+	for _, conflictElev := range conflictElevs {
+		conflictID, conflictfloor, _, _ := logmanagement.GetElevInfo(conflictElev)
+		if myDist > math.Abs(float64(conflictfloor-destination)) {
+			return false
+		} else if myDist == math.Abs(float64(conflictfloor-destination)) && id > conflictID {
+			return false
+		}
+	}
+	return true
+}
+
+func GetElevList() []logmanagement.Elev {
+	return logmanagement.ElevList
+}
+
+func UpdateElevInfo(floor int, order logmanagement.Order, state int) {
+	logmanagement.SetElevInfo(floor, order, state)
+}
+
+// UpdateOrderQueue updates the order queue
+func UpdateOrderQueue(floor int, button int, active int) {
+	logmanagement.OrderQueue[floor][button].Active = active
 }

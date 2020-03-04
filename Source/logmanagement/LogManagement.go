@@ -23,31 +23,32 @@ const (
 
 /*OrderStruct*/
 type Order struct {
-	floor      int //Remove
-	ButtonType int //Remove
-	active     int
+	Floor      int
+	ButtonType int
+	Active     int // Rename to status
 	// Timer?
 }
 
 /*Elevstruct for keeping info about ther elevs*/
 type Elev struct {
-	id    string
-	floor int
+	id           int //endret fra string
+	floor        int
+	currentOrder Order
 	//Lastseen time
 	state int
 }
 
 /*Log to be sendt over the network*/
 type log struct {
-	orders  []Order
-	Elev Elev
+	orders []Order
+	Elev   Elev
 	//version time
 }
 
 /*Declaration of local log*/
 var log1 log
-
-var elevList []Elev
+var ElevInfo Elev
+var ElevList []Elev
 
 /*Broadcast and recieve channel*/
 var RcvChannel chan log
@@ -85,11 +86,6 @@ func InitializeQueue(queue *[numFloors][numButtons]Order) {
 	}
 }*/
 
-// UpdateOrderQueue updates the order queue
-func UpdateOrderQueue(floor int, button int, active int) {
-	OrderQueue[floor][button].Active = active
-}
-
 // GetActiveOrder returns the first found active order
 
 func GetOrder(floor int, buttonType int) Order {
@@ -100,14 +96,24 @@ func SetOrder(floor int, buttonType int, value int) {
 	OrderQueue[floor][buttonType] = NewOrder(floor, buttonType, value)
 }
 
+func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
+	return elev.id, elev.floor, elev.currentOrder, elev.state
+}
+
+func SetElevInfo(floor int, order Order, state int) {
+	ElevInfo.floor = floor
+	ElevInfo.currentOrder = order
+	ElevInfo.state = state
+}
+
 /**
  * @brief puts message on bcastChannel
  * @param Message; message to be transmitted
  */
-func UpdateLogFromLocal() {
+func SendLogFromLocal() {
 	var message log
-	message.orders = createOrderListFromOrderQueue()
-	message.Elev = elevList[0]
+	//message.orders = createOrderListFromOrderQueue()
+	message.Elev = ElevList[0]
 	for {
 		bcastChannel <- message
 		time.Sleep(1 * time.Second)
@@ -163,38 +169,38 @@ func InitNetwork(port int) {
 
 func updateElevatorQueue(msg log) {
 	var elev = msg.Elev
-	for _, i := range elevList {
+	for _, i := range ElevList {
 		if elev.id == i.id {
 			i.floor = elev.floor
 			i.state = elev.state
 			return
-		}else{
-			elevList = append(elevList, elev)
+		} else {
+			ElevList = append(ElevList, elev)
 		}
 	}
 }
 
 func updateOrderQueue(msg log) {
-	for  _, order := range msg.orders{
-		OrderQueue[order.floor][order.ButtonType].active = order.active
+	for _, order := range msg.orders {
+		OrderQueue[order.Floor][order.ButtonType].Active = order.Active
 	}
-	
+
 }
 
-func createOrderListFromOrderQueue() []order {
-	listedOrders []order
-	for  i := range OrderQueue {
-        for k := range i{
-			var temp order
-			temp.floor = i
-			temp.buttonType = k
-			temp.active = OrderQueue[i][k].active
+/*func createOrderListFromOrderQueue() []Order {
+	listedOrders := [][]Order{}
+	for i := range OrderQueue {
+		for k := range i {
+			temp := Order{}
+			temp.Floor = i
+			temp.ButtonType = k
+			temp.Active = OrderQueue[i][k].Active
 			listedOrders = append(listedOrders, temp)
 		}
 	}
 	return listedOrders
-	
-}
+
+}*/
 func GetMatrixDimensions() (rows, cols int) {
 	return numFloors, numButtons
 }

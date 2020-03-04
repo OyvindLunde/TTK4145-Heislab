@@ -1,6 +1,7 @@
 package elevcontroller
 
 import (
+	"fmt"
 	"time"
 
 	"../elevio"
@@ -45,12 +46,12 @@ func InitializeElevator(numFloors int) {
 
 func ButtonPressed(receiver chan<- Button) {
 	for {
+		fmt.Println("In: Button Pressed")
 		ButtonPress := make(chan elevio.ButtonEvent)
-		elevio.PollButtons(ButtonPress)
-		select {
+		elevio.PollButtons(ButtonPress)		
 		case a := <-ButtonPress:
 			receiver <- Button{Floor: a.Floor, Type: int(a.Button)}
-		}
+		
 	}
 }
 
@@ -78,4 +79,8 @@ func ElevStopAtFloor(floor int) {
 
 func UpdateLight(button Button, value bool) {
 	elevio.SetButtonLamp(elevio.ButtonType(button.Type), button.Floor, value)
+}
+
+func UpdateFloorIndicator(floor int) {
+	elevio.SetFloorIndicator(floor)
 }
