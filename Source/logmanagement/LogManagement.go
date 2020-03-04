@@ -23,31 +23,31 @@ const (
 
 /*OrderStruct*/
 type Order struct {
-	Floor      int //Remove
+	floor      int //Remove
 	ButtonType int //Remove
-	Active     int
+	active     int
 	// Timer?
 }
 
 /*Elevstruct for keeping info about ther elevs*/
 type Elev struct {
-	ID    string
-	Floor int
+	id    string
+	floor int
 	//Lastseen time
 	state int
 }
 
 /*Log to be sendt over the network*/
 type log struct {
-	//Orders []Order
-	//Elevs []Elev
-	Message string
-	Iter    int
+	orders  []Order
+	Elev Elev
 	//version time
 }
 
 /*Declaration of local log*/
 var log1 log
+
+var elevList []Elev
 
 /*Broadcast and recieve channel*/
 var RcvChannel chan log
@@ -110,14 +110,12 @@ func GetOrder(floor int, buttonType int) Order {
  * @brief puts message on bcastChannel
  * @param Message; message to be transmitted
  */
-func UpdateLogFromLocal( /*Message log*/ ) {
-	log1.Iter = 0
-	log1.Message = "lil boy repus"
+func UpdateLogFromLocal() {
+	var message log
+	message.orders = createOrderListFromOrderQueue()
+	message.Elev = elevList[0]
 	for {
-		fmt.Printf("updating\n")
-		log1.Iter++
-		bcastChannel <- log1
-		fmt.Printf("ok?\n")
+		bcastChannel <- message
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -128,6 +126,8 @@ func UpdateLogFromLocal( /*Message log*/ ) {
 func UpdateLogFromNetwork() {
 	for {
 		a := <-RcvChannel
+		updateElevatorQueue(a)
+		updateOrderQueue(a)
 		fmt.Printf("Received: %#v\n", a)
 	}
 }
@@ -166,3 +166,38 @@ func InitNetwork(port int) {
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
 }*/
+
+func updateElevatorQueue(msg log) {
+	var elev = msg.Elev
+	for _, i := range elevList {
+		if elev.id == i.id {
+			i.floor = elev.floor
+			i.state = elev.state
+			return
+		}else{
+			elevList = append(elevList, elev)
+		}
+	}
+}
+
+func updateOrderQueue(msg log) {
+	for  _, order := range msg.orders{
+		OrderQueue[order.floor][order.ButtonType].active = order.active
+	}
+	
+}
+
+func createOrderListFromOrderQueue() []order {
+	listedOrders []order
+	for  i := range OrderQueue {
+        for k := range i{
+			var temp order
+			temp.floor = i
+			temp.buttonType = k
+			temp.active = OrderQueue[i][k].active
+			listedOrders = append(listedOrders, temp)
+		}
+	}
+	return listedOrders
+	
+}
