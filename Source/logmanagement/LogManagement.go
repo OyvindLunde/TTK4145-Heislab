@@ -91,19 +91,13 @@ func UpdateOrderQueue(floor int, button int, active int) {
 }
 
 // GetActiveOrder returns the first found active order
-func GetPendingOrder() Order {
-	for i := 0; i < numFloors; i++ {
-		for j := 0; j < numButtons; j++ {
-			if OrderQueue[i][j].Active == 0 {
-				return OrderQueue[i][j]
-			}
-		}
-	}
-	return Order{Floor: -1, ButtonType: -1, Active: -1}
-}
 
 func GetOrder(floor int, buttonType int) Order {
 	return OrderQueue[floor][buttonType]
+}
+
+func SetOrder(floor int, buttonType int, value int) {
+	OrderQueue[floor][buttonType] = NewOrder(floor, buttonType, value)
 }
 
 /**
@@ -200,4 +194,7 @@ func createOrderListFromOrderQueue() []order {
 	}
 	return listedOrders
 	
+}
+func GetMatrixDimensions() (rows, cols int) {
+	return numFloors, numButtons
 }
