@@ -27,7 +27,7 @@ type Order struct {
 	Floor      int
 	ButtonType int
 	Active     int // Rename to status
-	// Timer?
+	// Timer   timer
 }
 
 /*Elevstruct for keeping info about ther elevs*/
@@ -41,7 +41,7 @@ type Elev struct {
 
 /*Log to be sendt over the network*/
 type log struct {
-	orders []Order
+	orders [numFloors][numButtons]Order
 	Elev   Elev
 	//version time
 }
@@ -55,57 +55,30 @@ var ElevList []Elev
 var RcvChannel chan log
 var bcastChannel chan log
 
-func NewOrder(floor int, buttonType int, active int) Order { // Overflødig per nå
-	order := Order{Floor: floor, ButtonType: buttonType, Active: active}
-	return order
-}
+var OrderQueue = [numFloors][numButtons]Order{}
 
-var OrderQueue = &[numFloors][numButtons]Order{}
-
-func InitializeQueue(queue *[numFloors][numButtons]Order) {
+func InitializeQueue() {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
 			//queue[i][j] = nil
-			queue[i][j].Floor = i
-			queue[i][j].ButtonType = j
-			queue[i][j].Active = -1
+			OrderQueue[i][j].Floor = i
+			OrderQueue[i][j].ButtonType = j
+			OrderQueue[i][j].Active = -1
 		}
 	}
 }
 
-/*func CheckForOrders(queue *[numFloors][numButtons]Order, receiver chan<- Order) { // Velger den første i lista, ikke den eldste ordren
-	for { // Legg i orderHandler?
-		time.Sleep(20 * time.Millisecond)
-		for i := 0; i < numFloors; i++ {
-			for j := 0; j < numButtons; j++ {
-				if queue[i][j].Active == 0 {
-					fmt.Printf("%+v\n", queue[i][j])
-					receiver <- queue[i][j]
-				}
-			}
-		}
-	}
-}*/
-
-// GetActiveOrder returns the first found active order
 
 func GetOrder(floor int, buttonType int) Order {
 	return OrderQueue[floor][buttonType]
 }
 
-func SetOrder(floor int, buttonType int, value int) {
-	OrderQueue[floor][buttonType] = NewOrder(floor, buttonType, value)
-}
+
 
 func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 	return elev.id, elev.floor, elev.currentOrder, elev.state
 }
 
-/*func SetElevInfo(floor int, order Order, state int) {
-	ElevInfo.floor = floor
-	ElevInfo.currentOrder = order
-	ElevInfo.state = state
-}*/
 
 /**
  * @brief puts message on bcastChannel
@@ -114,10 +87,12 @@ func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 func SendLogFromLocal() {
 	var message log
 	//message.orders = createOrderListFromOrderQueue()
-	message.Elev = ElevList[0]
+	message.orders = OrderQueue
+	//message.Elev = ElevList[0]
+	message.Elev = ElevInfo
 	for {
 		bcastChannel <- message
-		time.Sleep(1 * time.Second)
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 
@@ -126,10 +101,11 @@ func SendLogFromLocal() {
  */
 func UpdateLogFromNetwork() {
 	for {
+		time.Sleep(20 * time.Millisecond)
 		a := <-RcvChannel
 		updateElevatorQueue(a)
-		updateOrderQueue(a)
-		fmt.Printf("Received: %#v\n", a)
+		updateQueueFromNetwork(a)
+		//fmt.Printf("Received: %#v\n", a)
 	}
 }
 
@@ -181,10 +157,11 @@ func updateElevatorQueue(msg log) {
 	}
 }
 
-func updateOrderQueue(msg log) {
-	for _, order := range msg.orders {
+func updateQueueFromNetwork(msg log) {
+	OrderQueue = msg.orders
+	/*for _, order := range msg.orders {
 		OrderQueue[order.Floor][order.ButtonType].Active = order.Active
-	}
+	}*/
 
 }
 
@@ -218,7 +195,7 @@ func UpdateElevInfo(floor *int, order *Order, state *int) {
 		ElevInfo.floor = *floor
 		ElevInfo.currentOrder = *order
 		ElevInfo.state = *state
-		fmt.Println(ElevInfo)
+		//fmt.Println(ElevInfo)
 					
 	}
 	

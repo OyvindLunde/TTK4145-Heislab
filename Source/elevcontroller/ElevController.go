@@ -6,13 +6,9 @@ import (
 	"../elevio"
 )
 
-var ButtonPress chan elevio.ButtonEvent
-var FloorReached chan int
+//var ButtonPress chan elevio.ButtonEvent
+//var FloorReached chan int
 
-type Button struct {
-	Floor int
-	Type  int
-}
 
 func initializeLights(numFloors int) {
 	for i := 0; i < numFloors; i++ {
@@ -43,18 +39,6 @@ func InitializeElevator(numFloors int) {
 	go elevio.PollFloorSensor(FloorReached)*/
 }
 
-func ButtonPressed(receiver chan<- Button) {
-	for {
-		ButtonPress := make(chan elevio.ButtonEvent)
-		elevio.PollButtons(ButtonPress)
-		select  {
-		case a := <-ButtonPress:
-			receiver <- Button{Floor: a.Floor, Type: int(a.Button)}
-		}
-		
-		
-	}
-}
 
 func FloorIsReached(receiver chan<- int) {
 	for {
@@ -76,12 +60,4 @@ func OpenCloseDoor(seconds time.Duration) {
 func ElevStopAtFloor(floor int) {
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	OpenCloseDoor(3)
-}
-
-func UpdateLight(button Button, value bool) {
-	elevio.SetButtonLamp(elevio.ButtonType(button.Type), button.Floor, value)
-}
-
-func UpdateFloorIndicator(floor int) {
-	elevio.SetFloorIndicator(floor)
 }

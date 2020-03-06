@@ -5,7 +5,7 @@ import (
 	//"fmt"
 	"math"
 
-	"../elevcontroller"
+	//"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
 )
@@ -13,7 +13,7 @@ import (
 // GetDestination returns the floor the elevator should go to
 func InitOrderHandler(port int) { //Overflødig per nå
 	logmanagement.InitNetwork(port)
-	logmanagement.InitializeQueue(logmanagement.OrderQueue)
+	logmanagement.InitializeQueue()
 }
 
 // GetDestination returns the floor the elevator should go to
@@ -48,13 +48,7 @@ func GetDirection(currentfloor int, destination int) int {
 	}
 }
 
-// ShouldElevatorExecuteOrder determines if the elevator should execute a certain order
-/*func ShouldElevatorExecuteOrder(order logmanagement.Order, currentfloor int, destination int) bool {
-	if destination == -1 || destination == order.Floor {
-		return true
-	}
-	return false
-}*/
+
 
 // ShouldElevatorStop determines if the elevator should stop when it reaches a floor
 func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.Elev, elevlist []logmanagement.Elev) bool {
@@ -91,7 +85,8 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Active == -1 {
 				UpdateOrderQueue(order.Floor, int(order.ButtonType), 0)
-				elevcontroller.UpdateLight(elevcontroller.Button{Floor: order.Floor, Type: int(order.ButtonType)}, true)
+				elevio.SetButtonLamp(a.Button, a.Floor, true)
+				//elevcontroller.UpdateLight(elevcontroller.Button{Floor: order.Floor, Type: int(order.ButtonType)}, true)
 			}
 		
 		}
@@ -135,8 +130,6 @@ func solveConflict(order logmanagement.Order, elev logmanagement.Elev, destinati
 func GetElevList() []logmanagement.Elev {
 	return logmanagement.ElevList
 }
-
-
 
 // UpdateOrderQueue updates the order queue
 func UpdateOrderQueue(floor int, button int, active int) {
