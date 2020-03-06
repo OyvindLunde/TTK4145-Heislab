@@ -16,9 +16,10 @@ var id string
 type State int
 
 const (
-	Idle = 0
-	Exec = 1
-	Lost = 2
+	IDLE = 0
+	EXECUTE = 1
+	LOST = 2
+	RESET = 3
 )
 
 /*OrderStruct*/
@@ -100,11 +101,11 @@ func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 	return elev.id, elev.floor, elev.currentOrder, elev.state
 }
 
-func SetElevInfo(floor int, order Order, state int) {
+/*func SetElevInfo(floor int, order Order, state int) {
 	ElevInfo.floor = floor
 	ElevInfo.currentOrder = order
 	ElevInfo.state = state
-}
+}*/
 
 /**
  * @brief puts message on bcastChannel
@@ -203,4 +204,22 @@ func updateOrderQueue(msg log) {
 }*/
 func GetMatrixDimensions() (rows, cols int) {
 	return numFloors, numButtons
+}
+
+func InitializeElevInfo() {
+	ElevInfo.floor = 0
+	ElevInfo.currentOrder = Order{Floor: -1, ButtonType: -1, Active: -1}
+	ElevInfo.state = 0
+}
+
+func UpdateElevInfo(floor *int, order *Order, state *int) {
+	for {
+		time.Sleep(20 * time.Millisecond)
+		ElevInfo.floor = *floor
+		ElevInfo.currentOrder = *order
+		ElevInfo.state = *state
+		fmt.Println(ElevInfo)
+					
+	}
+	
 }

@@ -1,7 +1,8 @@
 package orderhandler
 
 import (
-	"fmt"
+	
+	//"fmt"
 	"math"
 
 	"../elevcontroller"
@@ -83,30 +84,24 @@ func ClearOrdersAtFloor(floor int) {
 	}
 }
 
-func HandleButtonEvents(floor *int) {
-	ButtonPress := make(chan elevcontroller.Button)
-	FloorReached := make(chan int)
-
+func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 	for {
-		elevcontroller.ButtonPressed(ButtonPress)
-		elevcontroller.FloorIsReached(FloorReached)
-		fmt.Println("In: HandleButtonEvents")
 		select {
 		case a := <-ButtonPress:
-			fmt.Println("Button pressed")
-			order := logmanagement.GetOrder(a.Floor, a.Type)
+			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Active == -1 {
 				UpdateOrderQueue(order.Floor, int(order.ButtonType), 0)
 				elevcontroller.UpdateLight(elevcontroller.Button{Floor: order.Floor, Type: int(order.ButtonType)}, true)
 			}
-		case a := <-FloorReached:
-			*floor = a
-			elevcontroller.UpdateFloorIndicator(*floor)
+		
 		}
 	}
 }
 
 func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, destination int, elevlist []logmanagement.Elev) bool {
+	//fmt.Printf("Elev: %v\n", elev)
+	//fmt.Printf("Elevlist: %v\n", elevlist)
+	//fmt.Printf("Destination: %v\n", destination)
 	if destination == -1 || order.Active == -1 {
 		return false
 	}
@@ -141,9 +136,7 @@ func GetElevList() []logmanagement.Elev {
 	return logmanagement.ElevList
 }
 
-func UpdateElevInfo(floor int, order logmanagement.Order, state int) {
-	logmanagement.SetElevInfo(floor, order, state)
-}
+
 
 // UpdateOrderQueue updates the order queue
 func UpdateOrderQueue(floor int, button int, active int) {

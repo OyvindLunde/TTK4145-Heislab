@@ -81,7 +81,7 @@ func SetStopLamp(value bool) {
 	_conn.Write([]byte{5, toByte(value), 0, 0})
 }
 
-/*func PollButtons(receiver chan<- ButtonEvent) {
+func PollButtons(receiver chan<- ButtonEvent) {
 	prev := make([][3]bool, _numFloors)
 	for {
 		time.Sleep(_pollRate)
@@ -95,9 +95,9 @@ func SetStopLamp(value bool) {
 			}
 		}
 	}
-}*/
+}
 
-func PollButtons(receiver chan<- ButtonEvent) {
+/*func PollButtons(receiver chan<- ButtonEvent) {
 	prev := make([][3]bool, _numFloors)
 	time.Sleep(_pollRate)
 	for f := 0; f < _numFloors; f++ {
@@ -109,9 +109,9 @@ func PollButtons(receiver chan<- ButtonEvent) {
 			prev[f][b] = v
 		}
 	}
-}
+}*/
 
-/*func PollFloorSensor(receiver chan<- int) {
+func PollFloorSensor(receiver chan<- int) {
 	prev := -1
 	for {
 		time.Sleep(_pollRate)
@@ -121,17 +121,18 @@ func PollButtons(receiver chan<- ButtonEvent) {
 		}
 		prev = v
 	}
-}*/
+}
 
-func PollFloorSensor(receiver chan<- int) {
+/*func PollFloorSensor(receiver chan<- int) {
 	prev := -1
 	time.Sleep(_pollRate)
 	v := getFloor()
 	if v != prev && v != -1 {
+		fmt.Printf("floor: %v\n", v)
 		receiver <- v
 	}
 	prev = v
-}
+}*/
 
 func PollStopButton(receiver chan<- bool) {
 	prev := false

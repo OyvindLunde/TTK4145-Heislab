@@ -1,5 +1,7 @@
 package fsm
 
+
+import "fmt"
 import (
 	"../elevcontroller"
 	"../elevio"
@@ -7,80 +9,80 @@ import (
 	"../orderhandler"
 )
 
-type State string
+type State int
 
 const (
-	INIT    = "INIT"
-	IDLE    = "IDLE"
-	EXECUTE = "EXECUTE"
-	RESET   = "RESET"
+	INIT    = 0
+	IDLE    = 1
+	EXECUTE = 2
+	RESET   = 3
 )
 
 func Initialize(numFloors int) {
-	elevio.Init("localhost:15657", numFloors)
 	elevcontroller.InitializeElevator(numFloors)
 	elevio.SetFloorIndicator(0) // Evt fix løpende update senere
+	logmanagement.InitializeElevInfo()
 	orderhandler.InitOrderHandler(15647)
-
 }
 
 func RunElevator() {
+	fmt.Println("Hello")
 	destination := -1
-	dir := 0   // declared to make code run, prob might delete later
-	floor := 0 // same
+	dir := 0
+	floor := 0
 	state := IDLE
 	//id := 1
 	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Active: -1}
-	orderhandler.UpdateElevInfo(floor, NoOrder, 0)
+	currentOrder := NoOrder
 
-	ButtonPress := make(chan elevcontroller.Button)
+	ButtonPress := make(chan elevio.ButtonEvent)
 	FloorReached := make(chan int)
 
-	go elevcontroller.ButtonPressed(ButtonPress)
-	go elevcontroller.FloorIsReached(FloorReached)
-	//go elevio.PollButtons(ButtonPressed)
-	//go elevio.PollFloorSensor(FloorReached)
-	//go orderhandler.HandleButtonEvents(&floor)
+	go elevio.PollButtons(ButtonPress)
+	go elevio.PollFloorSensor(FloorReached)
+	go orderhandler.HandleButtonEvents(ButtonPress)
+	go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state)
 
 	for {
-		switch state {
+		switch state {			
 		case IDLE:
-			//fmt.Println("In: IDLE")
-			currentOrder := orderhandler.GetPendingOrder()
+			currentOrder = orderhandler.GetPendingOrder()
 			if currentOrder != NoOrder {
-				currentOrder.Active = 1
-				orderhandler.UpdateElevInfo(floor, currentOrder, 0)     //Skrive IDLE og ikke 0??
 				destination = orderhandler.GetDestination(currentOrder) //tentativt navn
+				currentOrder.Active = 1
 				ElevList := orderhandler.GetElevList()                  // Må lage denne
 				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.ElevInfo, destination, ElevList) {
 					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1)
-					orderhandler.UpdateElevInfo(floor, currentOrder, 1)
 					dir = orderhandler.GetDirection(floor, destination)
 					state = EXECUTE
 				} else {
 					currentOrder = NoOrder
-					orderhandler.UpdateElevInfo(floor, currentOrder, 0)
 				}
-
 			}
 
 		case EXECUTE:
 			elevio.SetMotorDirection(elevio.MotorDirection(dir))
-			if dir != 0 && orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {
-				elevcontroller.ElevStopAtFloor(floor)
-				orderhandler.ClearOrdersAtFloor(floor)
-				dir = orderhandler.GetDirection(floor, destination)
-				elevio.SetMotorDirection(elevio.MotorDirection(dir))
+			select {
+			case a := <-FloorReached:
+				floor = a
+				elevcontroller.UpdateFloorIndicator(floor)
+				if orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {					
+					elevcontroller.ElevStopAtFloor(floor)
+					orderhandler.ClearOrdersAtFloor(floor)
+					dir = orderhandler.GetDirection(floor, destination)
+					elevio.SetMotorDirection(elevio.MotorDirection(dir))
+					if dir == 0 {
+						destination = -1
+						state = IDLE
+					}
+				}
+			default:
 				if dir == 0 {
-					destination = -1
+					elevcontroller.OpenCloseDoor(3)
+					orderhandler.ClearOrdersAtFloor(floor)
 					state = IDLE
 				}
-			}
-			if dir == 0 {
-				elevcontroller.OpenCloseDoor(3)
-				orderhandler.ClearOrdersAtFloor(floor)
-				state = IDLE
-			}
+			}						
 
 		case RESET:
 			//reset elevator
@@ -90,6 +92,18 @@ func RunElevator() {
 	}
 
 }
+
+/*if dir != 0 && orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {
+	elevcontroller.ElevStopAtFloor(floor)
+	orderhandler.ClearOrdersAtFloor(floor)
+	dir = orderhandler.GetDirection(floor, destination)
+	elevio.SetMotorDirection(elevio.MotorDirection(dir))
+	if dir == 0 {
+		destination = -1
+		state = IDLE
+	}
+}*/
+
 
 /*func RunElevator() {
 	destination := -1
