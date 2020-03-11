@@ -1,7 +1,7 @@
 package orderhandler
 
 import (
-	
+
 	//"fmt"
 	"math"
 
@@ -12,7 +12,7 @@ import (
 
 // GetDestination returns the floor the elevator should go to
 func InitOrderHandler(port int) { //Overflødig per nå
-	logmanagement.InitNetwork(port)
+	//logmanagement.InitNetwork(port)
 	logmanagement.InitializeQueue()
 }
 
@@ -47,8 +47,6 @@ func GetDirection(currentfloor int, destination int) int {
 		return -1
 	}
 }
-
-
 
 // ShouldElevatorStop determines if the elevator should stop when it reaches a floor
 func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.Elev, elevlist []logmanagement.Elev) bool {
@@ -88,7 +86,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 				elevio.SetButtonLamp(a.Button, a.Floor, true)
 				//elevcontroller.UpdateLight(elevcontroller.Button{Floor: order.Floor, Type: int(order.ButtonType)}, true)
 			}
-		
+
 		}
 	}
 }

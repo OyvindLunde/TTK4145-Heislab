@@ -1,11 +1,12 @@
 package fsm
 
-
-import "fmt"
 import (
+	"fmt"
+
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
+	"../network"
 	"../orderhandler"
 )
 
@@ -18,20 +19,26 @@ const (
 	RESET   = 3
 )
 
+type FsmChannels struct {
+	ButtonPress  chan elevio.ButtonEvent
+	FloorReached chan int
+}
+
 func Initialize(numFloors int) {
 	elevcontroller.InitializeElevator(numFloors)
 	elevio.SetFloorIndicator(0) // Evt fix løpende update senere
 	logmanagement.InitializeElevInfo()
-	//logmanagement.InitNetwork(20021)
-	orderhandler.InitOrderHandler(15647)
+	//logmanagement.InitNetwork(20009)
+	orderhandler.InitOrderHandler(20009)
 }
 
-func RunElevator() {
+func RunElevator(channels FsmChannels) {
 	fmt.Println("Hello")
 	destination := -1
 	dir := 0
 	floor := 0
 	state := IDLE
+	port := 20009
 	//id := 1
 	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Active: -1}
 	currentOrder := NoOrder
@@ -39,21 +46,26 @@ func RunElevator() {
 	ButtonPress := make(chan elevio.ButtonEvent)
 	FloorReached := make(chan int)
 
+	RcvChannel := make(chan logmanagement.Log)
+	bcastChannel := make(chan logmanagement.Log)
+	go network.BrodcastMessage(port, bcastChannel)
+	go network.RecieveMessage(port, RcvChannel)
+
 	go elevio.PollButtons(ButtonPress)
 	go elevio.PollFloorSensor(FloorReached)
 	go orderhandler.HandleButtonEvents(ButtonPress)
 	go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state)
-	//go logmanagement.SendLogFromLocal()
-	//go logmanagement.UpdateLogFromNetwork()
+	go logmanagement.SendLogFromLocal(bcastChannel)
+	go logmanagement.UpdateLogFromNetwork(RcvChannel)
 
 	for {
-		switch state {			
+		switch state {
 		case IDLE:
 			currentOrder = orderhandler.GetPendingOrder()
 			if currentOrder != NoOrder {
 				destination = orderhandler.GetDestination(currentOrder) //tentativt navn
 				currentOrder.Active = 1
-				ElevList := orderhandler.GetElevList()                  // Må lage denne
+				ElevList := orderhandler.GetElevList() // Må lage denne
 				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.ElevInfo, destination, ElevList) {
 					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1)
 					dir = orderhandler.GetDirection(floor, destination)
@@ -69,7 +81,7 @@ func RunElevator() {
 			case a := <-FloorReached:
 				floor = a
 				elevio.SetFloorIndicator(floor)
-				if orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {					
+				if orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {
 					elevcontroller.ElevStopAtFloor(floor)
 					orderhandler.ClearOrdersAtFloor(floor)
 					dir = orderhandler.GetDirection(floor, destination)
@@ -85,7 +97,7 @@ func RunElevator() {
 					orderhandler.ClearOrdersAtFloor(floor)
 					state = IDLE
 				}
-			}						
+			}
 
 		case RESET:
 			//reset elevator
