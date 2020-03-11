@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var port string
@@ -25,6 +26,7 @@ func RecieveMessage(port int, chans ...interface{}) {
 	var buf [1024]byte
 	conn := dialBroadcastUDP(port)
 	for {
+		time.Sleep(20 * time.Millisecond)
 		//fmt.Println("In: Receive msg")
 		n, _, _ := conn.ReadFrom(buf[0:])
 		for _, ch := range chans {
@@ -74,6 +76,7 @@ func BrodcastMessage(port int, chans ...interface{}) {
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
 
 	for {
+		time.Sleep(20 * time.Millisecond)
 		chosen, value, _ := reflect.Select(selectCases)
 		//fmt.Println("Sending:")
 		//fmt.Println(value)

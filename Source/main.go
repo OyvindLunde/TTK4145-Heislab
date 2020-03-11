@@ -8,6 +8,7 @@ import (
 
 func main() {
 	numFloors := 4
+	numButtons := 3
 	port := 15657
 
 	fsmChannels := fsm.FsmChannels{
@@ -21,7 +22,7 @@ func main() {
 	}
 
 	fsm.Initialize(numFloors, port)
-	go fsm.RunElevator(fsmChannels)
+	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
 	go logmanagement.Communication(port, networkChannels)
 
 	select {}

@@ -1,6 +1,7 @@
 package logmanagement
 
 import (
+	"fmt"
 	"time"
 
 	"../network"
@@ -26,6 +27,7 @@ type Order struct {
 	Floor      int
 	ButtonType int
 	Active     int // Rename to status
+	Finished   bool
 	// Timer   timer
 }
 
@@ -64,10 +66,10 @@ var OrderQueue = [numFloors][numButtons]Order{}
 func InitializeQueue() {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
-			//queue[i][j] = nil
 			OrderQueue[i][j].Floor = i
 			OrderQueue[i][j].ButtonType = j
 			OrderQueue[i][j].Active = -1
+			OrderQueue[i][j].Finished = false
 		}
 	}
 }
@@ -88,6 +90,7 @@ func SendLogFromLocal(BcastChannel chan Log) {
 	var message Log
 
 	for {
+		time.Sleep(20 * time.Millisecond)
 		message.Orders = OrderQueue
 		message.Elev = ElevInfo
 		BcastChannel <- message
@@ -100,14 +103,15 @@ func SendLogFromLocal(BcastChannel chan Log) {
  */
 func UpdateLogFromNetwork(RcvChannel chan Log) {
 	for {
-		//time.Sleep(100 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
 			//fmt.Printf("Received: %#v\n", a.Elev.Id)
 			if a.Elev.Id != ElevInfo.Id {
 				updateElevatorList(a)
 				updateQueueFromNetwork(a)
-				//fmt.Println(OrderQueue)
+				fmt.Println("Order4down: ")
+				fmt.Println(OrderQueue[3][1].Active)
 				//fmt.Printf("Received: %#v\n", a.Elev.CurrentOrder)
 			}
 			//fmt.Printf("Received: %#v\n", a.Elev)
@@ -147,11 +151,17 @@ func updateElevatorList(msg Log) {
 }
 
 func updateQueueFromNetwork(msg Log) {
+	for i := 0; i < numFloors; i++ {
+		for j := 0; j < numButtons-1; j++ {
+			if msg.Orders[i][j].Finished == true {
+				OrderQueue[i][j].Active = -1
+			} else if msg.Orders[i][j].Active != -1 {
+				OrderQueue[i][j].Active = msg.Orders[i][j].Active
+			}
+		}
+	}
 	//fmt.Println(msg.Orders)
-	OrderQueue = msg.Orders
-	/*for _, order := range msg.orders {
-		OrderQueue[order.Floor][order.ButtonType].Active = order.Active
-	}*/
+	//OrderQueue = msg.Orders
 
 }
 

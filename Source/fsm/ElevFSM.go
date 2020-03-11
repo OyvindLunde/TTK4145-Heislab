@@ -30,7 +30,7 @@ func Initialize(numFloors int, port int) {
 	orderhandler.InitOrderHandler(port)
 }
 
-func RunElevator(channels FsmChannels) {
+func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	fmt.Println("Hello")
 	destination := -1
 	dir := 0
@@ -42,6 +42,7 @@ func RunElevator(channels FsmChannels) {
 	go elevio.PollButtons(channels.ButtonPress)
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go orderhandler.HandleButtonEvents(channels.ButtonPress)
+	go orderhandler.UpdateLights(numFloors, numButtons)
 	go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state)
 
 	for {
@@ -49,7 +50,9 @@ func RunElevator(channels FsmChannels) {
 		case IDLE:
 			//fmt.Println(logmanagement.OrderQueue)
 			currentOrder = orderhandler.GetPendingOrder()
+			fmt.Println(currentOrder)
 			if currentOrder != NoOrder {
+				//fmt.Println("I got an order")
 				destination = orderhandler.GetDestination(currentOrder)
 				currentOrder.Active = 1
 				ElevList := orderhandler.GetElevList()
@@ -69,8 +72,8 @@ func RunElevator(channels FsmChannels) {
 				floor = a
 				elevio.SetFloorIndicator(floor)
 				if orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {
-					elevcontroller.ElevStopAtFloor(floor)
-					orderhandler.ClearOrdersAtFloor(floor)
+					//elevcontroller.ElevStopAtFloor(floor)
+					orderhandler.StopAtFloor(floor)
 					dir = orderhandler.GetDirection(floor, destination)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
 					if dir == 0 {
@@ -80,8 +83,8 @@ func RunElevator(channels FsmChannels) {
 				}
 			default:
 				if dir == 0 {
-					elevcontroller.OpenCloseDoor(3)
-					orderhandler.ClearOrdersAtFloor(floor)
+					//elevcontroller.OpenCloseDoor(3)
+					orderhandler.StopAtFloor(floor)
 					state = IDLE
 				}
 			}

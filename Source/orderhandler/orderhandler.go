@@ -3,9 +3,12 @@ package orderhandler
 import (
 
 	//"fmt"
-	"math"
 
-	//"../elevcontroller"
+	"fmt"
+	"math"
+	"time"
+
+	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
 )
@@ -14,7 +17,7 @@ import (
 func InitOrderHandler(port int) { //Overflødig per nå
 	//logmanagement.InitNetwork(port)
 	logmanagement.InitializeQueue()
-	logmanagement.InitializeElevInfo(69)
+	logmanagement.InitializeElevInfo(423)
 }
 
 // GetDestination returns the floor the elevator should go to
@@ -59,10 +62,10 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 		// Update order queue?
 		return true
 	}
-	if logmanagement.GetOrder(currentfloor, 1).Active == 0 && dir == -1 && ShouldITakeOrder(logmanagement.GetOrder(currentfloor, 1), elev, destination, elevlist) {
+	if logmanagement.GetOrder(currentfloor, 1).Active == 0 && dir == -1 {
 		return true
 	}
-	if logmanagement.GetOrder(currentfloor, 0).Active == 0 && dir == 1 && ShouldITakeOrder(logmanagement.GetOrder(currentfloor, 0), elev, destination, elevlist) {
+	if logmanagement.GetOrder(currentfloor, 0).Active == 0 && dir == 1 {
 		return true
 	}
 
@@ -70,17 +73,24 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 
 }
 
-func ClearOrdersAtFloor(floor int) {
-	for i := 0; i < 3; i++ { // Ta inn numButtons ??
+func StopAtFloor(floor int) {
+	logmanagement.OrderQueue[floor][0].Finished = true
+	logmanagement.OrderQueue[floor][1].Finished = true
+	elevcontroller.ElevStopAtFloor(floor)
+	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
 		UpdateOrderQueue(floor, i, -1)
-		elevio.SetButtonLamp(elevio.ButtonType(i), floor, false)
+		//elevio.SetButtonLamp(elevio.ButtonType(i), floor, false)
 	}
+	logmanagement.OrderQueue[floor][0].Finished = false
+	logmanagement.OrderQueue[floor][1].Finished = false
 }
 
 func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 	for {
+		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-ButtonPress:
+			//fmt.Println(a)
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Active == -1 {
 				UpdateOrderQueue(order.Floor, int(order.ButtonType), 0)
@@ -98,12 +108,18 @@ func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, destin
 	if destination == -1 || order.Active == -1 {
 		return false
 	}
+	fmt.Println("In: Should i Take Order")
+	fmt.Println(elev)
+	fmt.Println(elevlist)
 	conflictElevs := []logmanagement.Elev{}
 	for _, elev := range elevlist {
-		_, _, currentOrder, _ := logmanagement.GetElevInfo(elev)
-		if order == currentOrder {
+		if elev.State == 0 {
 			conflictElevs = append(conflictElevs, elev)
 		}
+		/*_, _, currentOrder, _ := logmanagement.GetElevInfo(elev)
+		if order == currentOrder {
+			conflictElevs = append(conflictElevs, elev)
+		}*/
 	}
 	if len(conflictElevs) != 0 {
 		return solveConflict(order, elev, destination, conflictElevs)
@@ -132,4 +148,20 @@ func GetElevList() []logmanagement.Elev {
 // UpdateOrderQueue updates the order queue
 func UpdateOrderQueue(floor int, button int, active int) {
 	logmanagement.OrderQueue[floor][button].Active = active
+}
+
+func UpdateLights(numFloors int, numButtons int) {
+	for {
+		time.Sleep(20 * time.Millisecond)
+		for i := 0; i < numFloors; i++ {
+			for j := 0; j < numButtons; j++ {
+				if logmanagement.OrderQueue[i][j].Active == -1 {
+					elevio.SetButtonLamp(elevio.ButtonType(j), i, false)
+				} else {
+					elevio.SetButtonLamp(elevio.ButtonType(j), i, true)
+				}
+			}
+		}
+	}
+
 }
