@@ -1,17 +1,18 @@
 package logmanagement
 
 import (
-	"fmt"
 	"time"
+
+	"../network"
 )
 
 const numFloors = 4
 const numButtons = 3
 
-var id string
+//var Id int
 
 /*State enum*/
-type State int
+type State int // Kanskje slette denne?
 
 const (
 	IDLE    = 0
@@ -50,10 +51,10 @@ var ElevInfo Elev
 var ElevList []Elev
 
 /*Broadcast and recieve channel*/
-/*type NetworkChannels struct {
+type NetworkChannels struct {
 	RcvChannel   chan Log
-	bcastChannel chan Log
-}*/
+	BcastChannel chan Log
+}
 
 //var RcvChannel chan Log
 //var bcastChannel chan Log
@@ -83,19 +84,13 @@ func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
  * @brief puts message on bcastChannel
  * @param Message; message to be transmitted
  */
-func SendLogFromLocal(bcastChannel chan Log) {
+func SendLogFromLocal(BcastChannel chan Log) {
 	var message Log
 
 	for {
 		message.Orders = OrderQueue
 		message.Elev = ElevInfo
-		//message.orders = createOrderListFromOrderQueue()
-		//message.orders = OrderQueue
-		//message.Elev = ElevList[0]
-		//message.Elev = ElevInfo
-		//fmt.Printf("ElevInfo (msg): %#v\n", message.Elev)
-		bcastChannel <- message
-		//fmt.Printf("Sending: %#v\n", ElevInfo)
+		BcastChannel <- message
 		time.Sleep(1000 * time.Millisecond)
 	}
 }
@@ -108,50 +103,37 @@ func UpdateLogFromNetwork(RcvChannel chan Log) {
 		//time.Sleep(100 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
-			fmt.Printf("Received: %#v\n", a.Elev)
-			//updateElevatorQueue(a)
-			//updateQueueFromNetwork(a)
+			//fmt.Printf("Received: %#v\n", a.Elev.Id)
+			if a.Elev.Id != ElevInfo.Id {
+				updateElevatorList(a)
+				updateQueueFromNetwork(a)
+				//fmt.Println(OrderQueue)
+				//fmt.Printf("Received: %#v\n", a.Elev.CurrentOrder)
+			}
+			//fmt.Printf("Received: %#v\n", a.Elev)
+
 		}
 	}
 }
 
-/**
- * @brief initiates channels and creates coroutines for brodcasting and recieving
- * @param port; port to listen and read on
- */
-/*func InitNetwork(port int) {
-	RcvChannel = make(chan Log)
-	bcastChannel = make(chan Log)
-	go network.BrodcastMessage(port, bcastChannel)
-	go network.RecieveMessage(port, RcvChannel)
-	fmt.Printf("Network initialized\n")
-}*/
+func Communication(port int, channels NetworkChannels) {
+	//RcvChannel := make(chan Log)
+	//bcastChannel := make(chan Log)
 
-/**
- * @brief Set id of elev.
- */
-/*func setElevID() {
+	go network.RecieveMessage(port, channels.RcvChannel)
+	go network.BrodcastMessage(port, channels.BcastChannel)
+	go SendLogFromLocal(channels.BcastChannel)
+	go UpdateLogFromNetwork(channels.RcvChannel)
+	//fmt.Printf("Network initialized\n")
+}
 
-	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
-
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
-	if id == "" {
-		localIP, err := localip.LocalIP()
-		if err != nil {
-			fmt.Println(err)
-			localIP = "DISCONNECTED"
-		}
-		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
-	}
-}*/
-
-func updateElevatorQueue(msg Log) {
+func updateElevatorList(msg Log) {
+	//fmt.Println("In: ElevatorList")
+	//fmt.Println(ElevList)
 	var elev = msg.Elev
+	if len(ElevList) == 0 {
+		ElevList = append(ElevList, elev)
+	}
 	for _, i := range ElevList {
 		if elev.Id == i.Id {
 			i.Floor = elev.Floor
@@ -161,9 +143,11 @@ func updateElevatorQueue(msg Log) {
 			ElevList = append(ElevList, elev)
 		}
 	}
+
 }
 
 func updateQueueFromNetwork(msg Log) {
+	//fmt.Println(msg.Orders)
 	OrderQueue = msg.Orders
 	/*for _, order := range msg.orders {
 		OrderQueue[order.Floor][order.ButtonType].Active = order.Active
@@ -189,7 +173,8 @@ func GetMatrixDimensions() (rows, cols int) {
 	return numFloors, numButtons
 }
 
-func InitializeElevInfo() {
+func InitializeElevInfo(port int) {
+	ElevInfo.Id = port
 	ElevInfo.Floor = 0
 	ElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Active: -1}
 	ElevInfo.State = 0

@@ -14,6 +14,7 @@ import (
 func InitOrderHandler(port int) { //Overflødig per nå
 	//logmanagement.InitNetwork(port)
 	logmanagement.InitializeQueue()
+	logmanagement.InitializeElevInfo(69)
 }
 
 // GetDestination returns the floor the elevator should go to
@@ -84,7 +85,6 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 			if order.Active == -1 {
 				UpdateOrderQueue(order.Floor, int(order.ButtonType), 0)
 				elevio.SetButtonLamp(a.Button, a.Floor, true)
-				//elevcontroller.UpdateLight(elevcontroller.Button{Floor: order.Floor, Type: int(order.ButtonType)}, true)
 			}
 
 		}

@@ -1,6 +1,8 @@
 package elevcontroller
 
 import (
+	"fmt"
+	"strconv"
 	"time"
 
 	"../elevio"
@@ -8,7 +10,6 @@ import (
 
 //var ButtonPress chan elevio.ButtonEvent
 //var FloorReached chan int
-
 
 func initializeLights(numFloors int) {
 	for i := 0; i < numFloors; i++ {
@@ -24,8 +25,10 @@ func initializeLights(numFloors int) {
 
 }
 
-func InitializeElevator(numFloors int) {
-	elevio.Init("localhost:15657", numFloors)
+func InitializeElevator(numFloors int, port int) {
+	fmt.Println("localhost:" + strconv.Itoa(port))
+	elevio.Init("localhost:"+strconv.Itoa(port), numFloors)
+	//elevio.Init("localhost:15657", numFloors)
 	initializeLights(numFloors)
 	elevio.SetMotorDirection(elevio.MD_Down)
 	for elevio.GetFloor() != 0 { //Fix getFloor problemet
@@ -38,7 +41,6 @@ func InitializeElevator(numFloors int) {
 	go elevio.PollButtons(ButtonPress)
 	go elevio.PollFloorSensor(FloorReached)*/
 }
-
 
 func FloorIsReached(receiver chan<- int) {
 	for {

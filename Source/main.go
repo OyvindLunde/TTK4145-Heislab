@@ -3,22 +3,26 @@ package main
 import (
 	"./elevio"
 	"./fsm"
-	//"./logmanagement"
+	"./logmanagement"
 )
 
 func main() {
-	// Make elevator and channels (and more?) here. Use as input in RunElevator
 	numFloors := 4
+	port := 15657
 
 	fsmChannels := fsm.FsmChannels{
 		ButtonPress:  make(chan elevio.ButtonEvent),
 		FloorReached: make(chan int),
 	}
 
-	//networkChannels := logmanagement.
-	//logmanagement.InitNetwork(15374)
-	//go logmanagement.SendLogFromLocal()
-	//logmanagement.UpdateLogFromNetwork()
-	fsm.Initialize(numFloors)
-	fsm.RunElevator(fsmChannels)
+	networkChannels := logmanagement.NetworkChannels{
+		RcvChannel:   make(chan logmanagement.Log),
+		BcastChannel: make(chan logmanagement.Log),
+	}
+
+	fsm.Initialize(numFloors, port)
+	go fsm.RunElevator(fsmChannels)
+	go logmanagement.Communication(port, networkChannels)
+
+	select {}
 }
