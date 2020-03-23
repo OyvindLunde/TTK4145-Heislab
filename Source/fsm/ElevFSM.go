@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"fmt"
+	"time"
 
 	"../elevcontroller"
 	"../elevio"
@@ -36,7 +37,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	dir := 0
 	floor := 0
 	state := IDLE
-	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Active: -1}
+	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 	currentOrder := NoOrder
 
 	go elevio.PollButtons(channels.ButtonPress)
@@ -46,15 +47,19 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state)
 
 	for {
+		time.Sleep(20 * time.Millisecond)
 		switch state {
 		case IDLE:
+			/*fmt.Println("Orders FSM: ")
+			fmt.Println(logmanagement.OrderQueue)
+			fmt.Println("...")*/
 			//fmt.Println(logmanagement.OrderQueue)
 			currentOrder = orderhandler.GetPendingOrder()
-			fmt.Println(currentOrder)
+			//fmt.Println(currentOrder)
 			if currentOrder != NoOrder {
 				//fmt.Println("I got an order")
 				destination = orderhandler.GetDestination(currentOrder)
-				currentOrder.Active = 1
+				currentOrder.Status = 1
 				ElevList := orderhandler.GetElevList()
 				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.ElevInfo, destination, ElevList) {
 					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1)
@@ -70,10 +75,13 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 			select {
 			case a := <-channels.FloorReached:
 				floor = a
+				logmanagement.ElevInfo.Floor = a // Added temporarily to Display the correct floor
+				logmanagement.Updates = true
 				elevio.SetFloorIndicator(floor)
 				if orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {
 					//elevcontroller.ElevStopAtFloor(floor)
 					orderhandler.StopAtFloor(floor)
+					logmanagement.Updates = true
 					dir = orderhandler.GetDirection(floor, destination)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
 					if dir == 0 {
@@ -85,6 +93,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				if dir == 0 {
 					//elevcontroller.OpenCloseDoor(3)
 					orderhandler.StopAtFloor(floor)
+					logmanagement.Updates = true
 					state = IDLE
 				}
 			}

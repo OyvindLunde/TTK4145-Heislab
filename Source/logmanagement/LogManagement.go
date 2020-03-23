@@ -16,20 +16,28 @@ const numButtons = 3
 type State int // Kanskje slette denne?
 
 const (
-	IDLE    = 0
-	EXECUTE = 1
-	LOST    = 2
-	RESET   = 3
+	INIT    = 0
+	IDLE    = 1
+	EXECUTE = 2
+	LOST	= 3
+	RESET   = 4
 )
 
-/*OrderStruct*/
 type Order struct {
 	Floor      int
 	ButtonType int
-	Active     int // Rename to status
+	Status     OrderStatus // Rename to status
 	Finished   bool
 	// Timer   timer
 }
+
+type OrderStatus int
+
+const (
+	INACTIVE    = -1
+	PENDING 	= 0
+	ACTIVE		= 1
+)
 
 /*Elevstruct for keeping info about ther elevs*/
 type Elev struct {
@@ -63,15 +71,18 @@ type NetworkChannels struct {
 
 var OrderQueue = [numFloors][numButtons]Order{}
 
+var Updates = false
+
 func InitializeQueue() {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
 			OrderQueue[i][j].Floor = i
 			OrderQueue[i][j].ButtonType = j
-			OrderQueue[i][j].Active = -1
+			OrderQueue[i][j].Status = -1
 			OrderQueue[i][j].Finished = false
 		}
 	}
+	fmt.Println("OrderQueue initialized")
 }
 
 func GetOrder(floor int, buttonType int) Order {
@@ -110,8 +121,8 @@ func UpdateLogFromNetwork(RcvChannel chan Log) {
 			if a.Elev.Id != ElevInfo.Id {
 				updateElevatorList(a)
 				updateQueueFromNetwork(a)
-				fmt.Println("Order4down: ")
-				fmt.Println(OrderQueue[3][1].Active)
+				//fmt.Println("Order4down: ")
+				//fmt.Println(OrderQueue[3][1].Active)
 				//fmt.Printf("Received: %#v\n", a.Elev.CurrentOrder)
 			}
 			//fmt.Printf("Received: %#v\n", a.Elev)
@@ -154,9 +165,9 @@ func updateQueueFromNetwork(msg Log) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
 			if msg.Orders[i][j].Finished == true {
-				OrderQueue[i][j].Active = -1
-			} else if msg.Orders[i][j].Active != -1 {
-				OrderQueue[i][j].Active = msg.Orders[i][j].Active
+				OrderQueue[i][j].Status = -1
+			} else if msg.Orders[i][j].Status != -1 {
+				OrderQueue[i][j].Status = msg.Orders[i][j].Status
 			}
 		}
 	}
@@ -165,20 +176,6 @@ func updateQueueFromNetwork(msg Log) {
 
 }
 
-/*func createOrderListFromOrderQueue() []Order {
-	listedOrders := [][]Order{}
-	for i := range OrderQueue {
-		for k := range i {
-			temp := Order{}
-			temp.Floor = i
-			temp.ButtonType = k
-			temp.Active = OrderQueue[i][k].Active
-			listedOrders = append(listedOrders, temp)
-		}
-	}
-	return listedOrders
-
-}*/
 func GetMatrixDimensions() (rows, cols int) {
 	return numFloors, numButtons
 }
@@ -186,7 +183,7 @@ func GetMatrixDimensions() (rows, cols int) {
 func InitializeElevInfo(port int) {
 	ElevInfo.Id = port
 	ElevInfo.Floor = 0
-	ElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Active: -1}
+	ElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 	ElevInfo.State = 0
 }
 

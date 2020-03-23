@@ -3,7 +3,8 @@ package main
 import (
 	"./elevio"
 	"./fsm"
-	"./logmanagement"
+	//"./logmanagement"
+	"./display"
 )
 
 func main() {
@@ -16,14 +17,16 @@ func main() {
 		FloorReached: make(chan int),
 	}
 
-	networkChannels := logmanagement.NetworkChannels{
+	/*networkChannels := logmanagement.NetworkChannels{
 		RcvChannel:   make(chan logmanagement.Log),
 		BcastChannel: make(chan logmanagement.Log),
-	}
+	}*/
 
 	fsm.Initialize(numFloors, port)
 	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
-	go logmanagement.Communication(port, networkChannels)
+	//go logmanagement.Communication(port, networkChannels)
+
+	go display.Display()
 
 	select {}
 }
