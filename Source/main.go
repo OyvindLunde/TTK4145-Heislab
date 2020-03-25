@@ -7,6 +7,13 @@ import (
 	"./display"
 )
 
+// Network "doesnt work" (for Øyvind), Windows Firewall?
+
+// Changes made:
+// Modified StopAtFloor to also take in "Finished" variable
+// Commented out a line in FSM - IDLE that may fix our communication problem
+// Made an alternative UpdateElevInfo, that is not a goroutine, but instead only is called when something is changed (pings the system less, which is nice)
+
 func main() {
 	numFloors := 4
 	numButtons := 3

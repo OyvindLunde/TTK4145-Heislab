@@ -10,8 +10,7 @@ import (
 	"../logmanagement"
 )
 
-// GetDestination returns the floor the elevator should go to
-func InitOrderHandler(port int) { //Overflødig per nå
+func InitOrderHandler(port int) { // Overflødig per nå, gjør jo ingenting annet enn å kalle to andre funksjoner
 	//logmanagement.InitNetwork(port)
 	logmanagement.InitializeQueue()
 	logmanagement.InitializeElevInfo(1) // Finn en løsning for å sette ID
@@ -19,7 +18,7 @@ func InitOrderHandler(port int) { //Overflødig per nå
 
 // GetDestination returns the floor the elevator should go to
 func GetDestination(order logmanagement.Order) int {
-	if order.Status == 0 { // != -1 ???
+	if order.Status == 0 { // != -1 ? Doesnt matter?
 		return order.Floor
 	}
 	return -1
@@ -38,7 +37,7 @@ func GetPendingOrder() logmanagement.Order {
 }
 
 //Annet navn enn Get?
-// GetMotorDirection returns which direction the elevator should move
+// GetDirection returns which direction the elevator should move
 func GetDirection(currentfloor int, destination int) int {
 	if destination == -1 || destination == currentfloor {
 		return 0
@@ -56,7 +55,6 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 		return true
 	}
 	if logmanagement.GetOrder(currentfloor, 2).Status == 0 {
-		// Update order queue?
 		return true
 	}
 	if logmanagement.GetOrder(currentfloor, 1).Status == 0 && dir == -1 {
@@ -72,18 +70,17 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 
 func StopAtFloor(floor int) {
 	for i := 0; i < 3; i++ {
-		if logmanagement.OrderQueue[floor][i].Status != -1 {
-			logmanagement.OrderQueue[floor][i].Finished = true
+		status := int(logmanagement.OrderQueue[floor][i].Status)
+		if status != -1 {
+			UpdateOrderQueue(floor, i, status, true)
 		}
-	}
+	} // Nye ordrer i samme etg som kommer inn mens dørene er åpne: Rekker vi å sende at de ordrene er fullført?
 	elevcontroller.ElevStopAtFloor(floor)
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
-		UpdateOrderQueue(floor, i, -1)
-		//elevio.SetButtonLamp(elevio.ButtonType(i), floor, false)
+		if logmanagement.OrderQueue[floor][i].Status != -1 {
+			UpdateOrderQueue(floor, i, -1, false)
+		}
 	}
-	logmanagement.OrderQueue[floor][0].Finished = false
-	logmanagement.OrderQueue[floor][1].Finished = false
-	logmanagement.OrderQueue[floor][2].Finished = false
 }
 
 func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
@@ -94,7 +91,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 			//fmt.Println(a)
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == -1 {
-				UpdateOrderQueue(order.Floor, int(order.ButtonType), 0)
+				UpdateOrderQueue(order.Floor, int(order.ButtonType), 0, false)
 				elevio.SetButtonLamp(a.Button, a.Floor, true)
 				logmanagement.Updates = true
 			}
@@ -148,8 +145,9 @@ func GetElevList() []logmanagement.Elev {
 }
 
 // UpdateOrderQueue updates the order queue
-func UpdateOrderQueue(floor int, button int, active int) { //Må kanskje endre til active OrderStatus
+func UpdateOrderQueue(floor int, button int, active int, finished bool) { // Må kanskje endre til active OrderStatus
 	logmanagement.OrderQueue[floor][button].Status = logmanagement.OrderStatus(active)
+	logmanagement.OrderQueue[floor][button].Finished = finished
 	logmanagement.Updates = true
 }
 

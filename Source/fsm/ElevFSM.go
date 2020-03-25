@@ -16,7 +16,8 @@ const (
 	INIT    = 0
 	IDLE    = 1
 	EXECUTE = 2
-	RESET   = 3
+	LOST	= 3
+	RESET   = 4
 )
 
 type FsmChannels struct {
@@ -40,61 +41,55 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 	currentOrder := NoOrder
 
-	go elevio.PollButtons(channels.ButtonPress)
+	go elevio.PollButtons(channels.ButtonPress) // Kan vi legge denne inn i HandleButtonEvents?
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go orderhandler.HandleButtonEvents(channels.ButtonPress)
 	go orderhandler.UpdateLights(numFloors, numButtons)
-	go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state)
+	//go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state) // Vurdere å droppe denne? Kjører unødvendig ofte
 
 	for {
 		time.Sleep(20 * time.Millisecond)
 		switch state {
 		case IDLE:
-			/*fmt.Println("Orders FSM: ")
-			fmt.Println(logmanagement.OrderQueue)
-			fmt.Println("...")*/
-			//fmt.Println(logmanagement.OrderQueue)
 			currentOrder = orderhandler.GetPendingOrder()
-			//fmt.Println(currentOrder)
 			if currentOrder != NoOrder {
-				//fmt.Println("I got an order")
 				destination = orderhandler.GetDestination(currentOrder)
-				currentOrder.Status = 1
-				ElevList := orderhandler.GetElevList()
+				// currentOrder.Status = 1 // Tror denne linjen er kilden til kommunikasjonsproblemet vårt
+				ElevList := orderhandler.GetElevList() // ElevList er public så trenger egt ikke denne?
 				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.ElevInfo, destination, ElevList) {
-					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1)
+					currentOrder.Status = 1
+					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
 					dir = orderhandler.GetDirection(floor, destination)
 					state = EXECUTE
+					logmanagement.UpdateElevInfo(floor, currentOrder, state)
 				} else {
-					currentOrder = NoOrder
+					currentOrder = NoOrder // Kan fjerne denne? Vil aldri bli kalt
 				}
 			}
 
 		case EXECUTE:
-			elevio.SetMotorDirection(elevio.MotorDirection(dir))
+			elevio.SetMotorDirection(elevio.MotorDirection(dir)) // Blir kalt (unødvendig) mange ganger. Men er "sikker"
 			select {
 			case a := <-channels.FloorReached:
 				floor = a
-				logmanagement.ElevInfo.Floor = a // Added temporarily to Display the correct floor
-				logmanagement.Updates = true
+				logmanagement.UpdateElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
 				if orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {
-					//elevcontroller.ElevStopAtFloor(floor)
 					orderhandler.StopAtFloor(floor)
-					logmanagement.Updates = true
 					dir = orderhandler.GetDirection(floor, destination)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
-					if dir == 0 {
-						destination = -1
+					if dir == 0 { // Forslag: Legge inn en CheckForCABOrders funksjon, må i så fall inn i default også
+						destination = -1 // Unødvendig?
 						state = IDLE
+						logmanagement.UpdateElevInfo(floor, NoOrder, state)
 					}
 				}
+
 			default:
 				if dir == 0 {
-					//elevcontroller.OpenCloseDoor(3)
 					orderhandler.StopAtFloor(floor)
-					logmanagement.Updates = true
 					state = IDLE
+					logmanagement.UpdateElevInfo(floor, NoOrder, state)		
 				}
 			}
 

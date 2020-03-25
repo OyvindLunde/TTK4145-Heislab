@@ -13,7 +13,7 @@ const numButtons = 3
 //var Id int
 
 /*State enum*/
-type State int // Kanskje slette denne?
+type State int // Kanskje slette denne? Eksisterer i FSM også
 
 const (
 	INIT    = 0
@@ -29,6 +29,7 @@ type Order struct {
 	Status     OrderStatus // Rename to status
 	Finished   bool
 	// Timer   timer
+	// Confirmed bool
 }
 
 type OrderStatus int
@@ -37,6 +38,7 @@ const (
 	INACTIVE    = -1
 	PENDING 	= 0
 	ACTIVE		= 1
+	// ACTIVE = ID?
 )
 
 /*Elevstruct for keeping info about ther elevs*/
@@ -46,7 +48,10 @@ type Elev struct {
 	CurrentOrder Order
 	//Lastseen time
 	State int
+	// Orders?
 }
+
+// LogList? Må kunne sende en reset heis cab orders
 
 /*Log to be sendt over the network*/
 type Log struct {
@@ -71,7 +76,7 @@ type NetworkChannels struct {
 
 var OrderQueue = [numFloors][numButtons]Order{}
 
-var Updates = false
+var Updates = false // Rename?
 
 func InitializeQueue() {
 	for i := 0; i < numFloors; i++ {
@@ -187,9 +192,9 @@ func InitializeElevInfo(port int) {
 	ElevInfo.State = 0
 }
 
-func UpdateElevInfo(floor *int, order *Order, state *int) {
+/*func UpdateElevInfo(floor *int, order *Order, state *int) {
 	for {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 		ElevInfo.Floor = *floor
 		ElevInfo.CurrentOrder = *order
 		ElevInfo.State = *state
@@ -197,4 +202,11 @@ func UpdateElevInfo(floor *int, order *Order, state *int) {
 
 	}
 
+}*/
+
+func UpdateElevInfo(floor int, order Order, state int) {
+	ElevInfo.Floor = floor
+	ElevInfo.CurrentOrder = order
+	ElevInfo.State = state
+	Updates = true
 }

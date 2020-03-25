@@ -4,8 +4,6 @@ package display
 // Må ta inn full log (elevInfo og orders) fra de andre heisene for å kunne displaye alt
 // Legges inn i displayOtherElevators. Nice å ha en logList i logmanagement?
 
-// Finne ut av Event (aksessere attributes)
-
 import (
 	"fmt"
 	"time"
@@ -77,7 +75,7 @@ func Display() {
 			case paint.Event:
 				paintScreen(w, sz, lightGray, blue0) // Paint background and border of screen in the selected colors
 				displayOrderExplanations(w, orderExpl)
-
+				//fmt.Println(&logmanagement.ElevInfo)
 				displayLocalElevator(w, s, elevStatic, logmanagement.OrderQueue, logmanagement.ElevInfo, arrow)
 				displayOtherElevators(w, s, elevStatic, logmanagement.ElevList, arrow)
 				
@@ -91,8 +89,9 @@ func Display() {
 	})
 }
 
-func update (w screen.EventDeque, Updates *bool) {
+func update(w screen.EventDeque, Updates *bool) {
 	for {
+		time.Sleep(20 * time.Millisecond)
 		if *Updates {
 			w.Send(paint.Event{})
 			*Updates = false
@@ -121,7 +120,6 @@ func displayLocalElevDynamic(w screen.Window, s screen.Screen, queue [numFloors]
 	// Display Elevator title with correct Id
 	elevatorTitle := drawText(s, "Elevator " + strconv.Itoa(elevInfo.Id) + " overview", 155, 20) // To improve runtime: change so that this is only calculated once
 	w.Copy(image.Point{start_x+btn_size_x/2-25, btnPanel_y0-25}, elevatorTitle, elevatorTitle.Bounds(), screen.Src, nil)
-	
 	displayElevInfo(w, drawElevInfo(s, elevInfo), 0)
 	displayFloorIndicator(w, arrow, elevInfo.Floor, 0)				
 	displayOrders(w, s, queue, btnPanel_x0)
@@ -372,10 +370,10 @@ func convState2String(state int) string {
 
 func convOrder2String(order logmanagement.Order) string {
 	if order.ButtonType == 0 {
-		return strconv.Itoa(order.Floor) + "DOWN"
+		return strconv.Itoa(order.Floor) + "UP"
 	}
 	if order.ButtonType == 1 {
-		return strconv.Itoa(order.Floor) + "UP"
+		return strconv.Itoa(order.Floor) + "DOWN"
 	}
 	if order.ButtonType == 2 {
 		return strconv.Itoa(order.Floor) + "CAB"
@@ -447,40 +445,3 @@ func drawVerticalLine(m *image.RGBA, x int, color color.RGBA) {
 		m.SetRGBA(x, y, color)
 	}
 }
-
-
-
-// Trash
-
-
-			//fmt.Println("In Display")
-			//fmt.Println(!(reflect.TypeOf(w.NextEvent()).String() == "size.Event"))
-			//fmt.Println(!logmanagement.Updates && !(reflect.TypeOf(w.NextEvent()).String() == "size.Event"))
-			//for (!logmanagement.Updates && !(reflect.TypeOf(w.NextEvent()).String() == "size.Event")) {}
-			//for (!logmanagement.Updates) {}
-			//fmt.Println(logmanagement.Updates)
-			//fmt.Println(reflect.TypeOf(w.NextEvent()).String())
-			//fmt.Println(reflect.TypeOf(w.NextEvent()).String())
-			//fmt.Println(reflect.TypeOf(w.NextEvent()).String() == "size.Event")
-			
-			
-			//fmt.Println("Got through")
-			//w.Send(paint.Event{})
-			//logmanagement.Updates = false
-			//fmt.Println(e)
-			//fmt.Println(reflect.TypeOf(w.NextEvent()))
-			//checkForUpdates(w, logmanagement.Updates)
-
-
-
-
-			//default:
-				//fmt.Println("In default")
-
-			/*case mouse.Event:
-				iter++
-				fmt.Println("In mouse.Event: " + strconv.Itoa(iter))
-
-			case lifecycle.Event:
-				iter++
-				fmt.Println("In lifecycle.Event: " + strconv.Itoa(iter))*/

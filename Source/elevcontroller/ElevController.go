@@ -42,7 +42,7 @@ func InitializeElevator(numFloors int, port int) {
 	go elevio.PollFloorSensor(FloorReached)*/
 }
 
-func FloorIsReached(receiver chan<- int) {
+func FloorIsReached(receiver chan<- int) { // Unused?
 	for {
 		FloorReached := make(chan int)
 		elevio.PollFloorSensor(FloorReached)
