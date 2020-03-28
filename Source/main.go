@@ -1,7 +1,6 @@
 package main
 
 import (
-	"./display"
 	"./elevio"
 	"./fsm"
 	"./logmanagement"
@@ -33,7 +32,7 @@ func main() {
 	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
 	go logmanagement.Communication(port, networkChannels)
 
-	go display.Display()
+	//go display.Display()
 
 	select {}
 }

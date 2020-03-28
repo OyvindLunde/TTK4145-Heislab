@@ -36,9 +36,9 @@ type Order struct {
 type OrderStatus int
 
 const (
-	PENDING  = 0
-	ACTIVE   = 1
-	INACTIVE = 2
+	PENDING  OrderStatus = 0
+	ACTIVE   OrderStatus = 1
+	INACTIVE OrderStatus = 2
 	// ACTIVE = ID?
 )
 
@@ -84,6 +84,7 @@ func InitializeQueue() {
 		}
 	}
 	fmt.Println("OrderQueue initialized")
+	//fmt.Println(OrderStatus(ACTIVE))
 }
 
 func GetOrder(floor int, buttonType int) Order {
@@ -101,8 +102,8 @@ func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
-		//fmt.Println("Sending:")
-		//printOrderQueue(OrderQueue)
+		fmt.Println("Sending:")
+		PrintOrderQueue(OrderQueue)
 		BcastChannel <- MyElevInfo
 	}
 }
@@ -117,8 +118,8 @@ func UpdateLogFromNetwork(RcvChannel chan Elev) {
 		case a := <-RcvChannel:
 			//fmt.Printf("Received: %#v\n", a.Elev.Id)
 			if a.Id != MyElevInfo.Id {
-				fmt.Println("Receiving:")
-				PrintOrderQueue(a.Orders)
+				//fmt.Println("Receiving:")
+				//PrintOrderQueue(a.Orders)
 				updateElevatorList(a)
 				updateQueueFromNetwork(a)
 			}
@@ -148,10 +149,10 @@ func Communication(port int, channels NetworkChannels) {
 
 func updateElevatorList(msg Elev) {
 	//fmt.Println("In: ElevatorList")
-	//fmt.Println(ElevList)
-	//var elev = msg.Elev
+	//PrintOrderQueue(msg.Orders)
 	for _, i := range OtherElevInfo {
 		if msg.Id == i.Id {
+			//fmt.Println("Correct ID")
 			i.Floor = msg.Floor
 			i.CurrentOrder = msg.CurrentOrder
 			i.State = msg.State

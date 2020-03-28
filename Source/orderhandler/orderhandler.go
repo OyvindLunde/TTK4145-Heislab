@@ -78,7 +78,7 @@ func StopAtFloor(floor int) {
 	elevcontroller.ElevStopAtFloor(floor)
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
 		if logmanagement.OrderQueue[floor][i].Status != 2 {
-			UpdateOrderQueue(floor, i, -1, false)
+			UpdateOrderQueue(floor, i, int(logmanagement.INACTIVE), false)
 		}
 	}
 }
@@ -92,7 +92,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == 2 {
 				UpdateOrderQueue(order.Floor, int(order.ButtonType), 0, false)
-				elevio.SetButtonLamp(a.Button, a.Floor, true)
+				//elevio.SetButtonLamp(a.Button, a.Floor, true)
 				logmanagement.DisplayUpdates = true
 			}
 
@@ -156,7 +156,7 @@ func UpdateLights(numFloors int, numButtons int) {
 		time.Sleep(20 * time.Millisecond)
 		for i := 0; i < numFloors; i++ {
 			for j := 0; j < numButtons; j++ {
-				if logmanagement.OrderQueue[i][j].Status == 2 {
+				if logmanagement.MyElevInfo.Orders[i][j].Status == 2 {
 					elevio.SetButtonLamp(elevio.ButtonType(j), i, false)
 				} else {
 					elevio.SetButtonLamp(elevio.ButtonType(j), i, true)
