@@ -16,7 +16,7 @@ const (
 	INIT    = 0
 	IDLE    = 1
 	EXECUTE = 2
-	LOST	= 3
+	LOST    = 3
 	RESET   = 4
 )
 
@@ -25,11 +25,11 @@ type FsmChannels struct {
 	FloorReached chan int
 }
 
-func Initialize(numFloors int, port int) {
-	elevcontroller.InitializeElevator(numFloors, port)
+func Initialize(numFloors int, id int, addr int) {
+	elevcontroller.InitializeElevator(numFloors, addr)
 	elevio.SetFloorIndicator(0)
 	//logmanagement.InitializeElevInfo()
-	orderhandler.InitOrderHandler(port)
+	orderhandler.InitOrderHandler(id)
 }
 
 func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
@@ -49,6 +49,9 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 
 	for {
 		time.Sleep(20 * time.Millisecond)
+		if len(logmanagement.ElevList) != 0 {
+			fmt.Println(logmanagement.ElevList)
+		}
 		switch state {
 		case IDLE:
 			currentOrder = orderhandler.GetPendingOrder()
@@ -89,7 +92,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				if dir == 0 {
 					orderhandler.StopAtFloor(floor)
 					state = IDLE
-					logmanagement.UpdateElevInfo(floor, NoOrder, state)		
+					logmanagement.UpdateElevInfo(floor, NoOrder, state)
 				}
 			}
 

@@ -10,10 +10,10 @@ import (
 	"../logmanagement"
 )
 
-func InitOrderHandler(port int) { // Overflødig per nå, gjør jo ingenting annet enn å kalle to andre funksjoner
+func InitOrderHandler(id int) { // Overflødig per nå, gjør jo ingenting annet enn å kalle to andre funksjoner
 	//logmanagement.InitNetwork(port)
 	logmanagement.InitializeQueue()
-	logmanagement.InitializeElevInfo(1) // Finn en løsning for å sette ID
+	logmanagement.InitializeElevInfo(id) // Finn en løsning for å sette ID
 }
 
 // GetDestination returns the floor the elevator should go to

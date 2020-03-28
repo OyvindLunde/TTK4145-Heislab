@@ -1,10 +1,10 @@
 package main
 
 import (
+	"./display"
 	"./elevio"
 	"./fsm"
-	//"./logmanagement"
-	"./display"
+	"./logmanagement"
 )
 
 // Network "doesnt work" (for Øyvind), Windows Firewall?
@@ -17,21 +17,23 @@ import (
 func main() {
 	numFloors := 4
 	numButtons := 3
-	port := 15657
+	id := 3
+	port := 20009
+	addr := 11112
 
 	fsmChannels := fsm.FsmChannels{
 		ButtonPress:  make(chan elevio.ButtonEvent),
 		FloorReached: make(chan int),
 	}
 
-	/*networkChannels := logmanagement.NetworkChannels{
+	networkChannels := logmanagement.NetworkChannels{
 		RcvChannel:   make(chan logmanagement.Log),
 		BcastChannel: make(chan logmanagement.Log),
-	}*/
+	}
 
-	fsm.Initialize(numFloors, port)
+	fsm.Initialize(numFloors, id, addr)
 	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
-	//go logmanagement.Communication(port, networkChannels)
+	go logmanagement.Communication(port, networkChannels)
 
 	go display.Display()
 

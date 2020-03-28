@@ -19,7 +19,7 @@ const (
 	INIT    = 0
 	IDLE    = 1
 	EXECUTE = 2
-	LOST	= 3
+	LOST    = 3
 	RESET   = 4
 )
 
@@ -35,9 +35,9 @@ type Order struct {
 type OrderStatus int
 
 const (
-	INACTIVE    = -1
-	PENDING 	= 0
-	ACTIVE		= 1
+	INACTIVE = -1
+	PENDING  = 0
+	ACTIVE   = 1
 	// ACTIVE = ID?
 )
 
@@ -124,6 +124,7 @@ func UpdateLogFromNetwork(RcvChannel chan Log) {
 		case a := <-RcvChannel:
 			//fmt.Printf("Received: %#v\n", a.Elev.Id)
 			if a.Elev.Id != ElevInfo.Id {
+				fmt.Println("nice")
 				updateElevatorList(a)
 				updateQueueFromNetwork(a)
 				//fmt.Println("Order4down: ")
