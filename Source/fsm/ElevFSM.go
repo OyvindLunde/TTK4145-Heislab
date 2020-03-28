@@ -34,11 +34,11 @@ func Initialize(numFloors int, id int, addr int) {
 
 func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	fmt.Println("Hello")
-	destination := -1
+	//destination := -1
 	dir := 0
 	floor := 0
 	state := IDLE
-	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
+	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
 	currentOrder := NoOrder
 
 	go elevio.PollButtons(channels.ButtonPress) // Kan vi legge denne inn i HandleButtonEvents?
@@ -49,24 +49,22 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 
 	for {
 		time.Sleep(20 * time.Millisecond)
-		if len(logmanagement.ElevList) != 0 {
-			fmt.Println(logmanagement.ElevList)
-		}
+		/*if len(logmanagement.OtherElevInfo) > 0 {
+			logmanagement.PrintOrderQueue(logmanagement.OtherElevInfo[0].Orders)
+		}*/
 		switch state {
 		case IDLE:
 			currentOrder = orderhandler.GetPendingOrder()
 			if currentOrder != NoOrder {
-				destination = orderhandler.GetDestination(currentOrder)
+				//destination = orderhandler.GetDestination(currentOrder)
 				// currentOrder.Status = 1 // Tror denne linjen er kilden til kommunikasjonsproblemet vårt
 				ElevList := orderhandler.GetElevList() // ElevList er public så trenger egt ikke denne?
-				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.ElevInfo, destination, ElevList) {
+				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, currentOrder.Floor, ElevList) {
 					currentOrder.Status = 1
 					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
-					dir = orderhandler.GetDirection(floor, destination)
+					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					state = EXECUTE
 					logmanagement.UpdateElevInfo(floor, currentOrder, state)
-				} else {
-					currentOrder = NoOrder // Kan fjerne denne? Vil aldri bli kalt
 				}
 			}
 
@@ -77,12 +75,12 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				floor = a
 				logmanagement.UpdateElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
-				if orderhandler.ShouldElevatorStop(floor, destination, logmanagement.ElevInfo, logmanagement.ElevList) {
+				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.MyElevInfo, logmanagement.OtherElevInfo) {
 					orderhandler.StopAtFloor(floor)
-					dir = orderhandler.GetDirection(floor, destination)
+					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
 					if dir == 0 { // Forslag: Legge inn en CheckForCABOrders funksjon, må i så fall inn i default også
-						destination = -1 // Unødvendig?
+						//destination = -1 // Unødvendig?
 						state = IDLE
 						logmanagement.UpdateElevInfo(floor, NoOrder, state)
 					}

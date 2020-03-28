@@ -2,6 +2,7 @@ package logmanagement
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"../network"
@@ -35,9 +36,9 @@ type Order struct {
 type OrderStatus int
 
 const (
-	INACTIVE = -1
 	PENDING  = 0
 	ACTIVE   = 1
+	INACTIVE = 2
 	// ACTIVE = ID?
 )
 
@@ -47,28 +48,23 @@ type Elev struct {
 	Floor        int
 	CurrentOrder Order
 	//Lastseen time
-	State int
-	// Orders?
+	State  int
+	Orders [numFloors][numButtons]Order
 }
 
 // LogList? Må kunne sende en reset heis cab orders
 
 /*Log to be sendt over the network*/
-type Log struct {
-	Orders [numFloors][numButtons]Order
-	Elev   Elev
-	//version time
-}
 
 /*Declaration of local log*/
-var log1 Log
-var ElevInfo Elev
-var ElevList []Elev
+
+var MyElevInfo Elev
+var OtherElevInfo []Elev
 
 /*Broadcast and recieve channel*/
 type NetworkChannels struct {
-	RcvChannel   chan Log
-	BcastChannel chan Log
+	RcvChannel   chan Elev
+	BcastChannel chan Elev
 }
 
 //var RcvChannel chan Log
@@ -76,14 +72,14 @@ type NetworkChannels struct {
 
 var OrderQueue = [numFloors][numButtons]Order{}
 
-var Updates = false // Rename?
+var DisplayUpdates = false // Used to display the system
 
 func InitializeQueue() {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
 			OrderQueue[i][j].Floor = i
 			OrderQueue[i][j].ButtonType = j
-			OrderQueue[i][j].Status = -1
+			OrderQueue[i][j].Status = 2
 			OrderQueue[i][j].Finished = false
 		}
 	}
@@ -102,39 +98,41 @@ func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
  * @brief puts message on bcastChannel
  * @param Message; message to be transmitted
  */
-func SendLogFromLocal(BcastChannel chan Log) {
-	var message Log
-
+func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
-		message.Orders = OrderQueue
-		message.Elev = ElevInfo
-		BcastChannel <- message
-		time.Sleep(1000 * time.Millisecond)
+		//fmt.Println("Sending:")
+		//printOrderQueue(OrderQueue)
+		BcastChannel <- MyElevInfo
 	}
 }
 
 /**
  * @brief reads message from RcvChannel and does hit width it
  */
-func UpdateLogFromNetwork(RcvChannel chan Log) {
+func UpdateLogFromNetwork(RcvChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
 			//fmt.Printf("Received: %#v\n", a.Elev.Id)
-			if a.Elev.Id != ElevInfo.Id {
-				fmt.Println("nice")
+			if a.Id != MyElevInfo.Id {
+				fmt.Println("Receiving:")
+				PrintOrderQueue(a.Orders)
 				updateElevatorList(a)
 				updateQueueFromNetwork(a)
-				//fmt.Println("Order4down: ")
-				//fmt.Println(OrderQueue[3][1].Active)
-				//fmt.Printf("Received: %#v\n", a.Elev.CurrentOrder)
 			}
-			//fmt.Printf("Received: %#v\n", a.Elev)
-
 		}
 	}
+}
+
+func PrintOrderQueue(queue [numFloors][numButtons]Order) {
+	fmt.Println("Orders:")
+	for i := numFloors - 1; i >= 0; i-- {
+		string := strconv.Itoa(int(queue[i][0].Status)) + strconv.Itoa(int(queue[i][1].Status)) + strconv.Itoa(int(queue[i][2].Status))
+		fmt.Println(string)
+	}
+	fmt.Println("____________")
 }
 
 func Communication(port int, channels NetworkChannels) {
@@ -143,54 +141,51 @@ func Communication(port int, channels NetworkChannels) {
 
 	go network.RecieveMessage(port, channels.RcvChannel)
 	go network.BrodcastMessage(port, channels.BcastChannel)
-	go SendLogFromLocal(channels.BcastChannel)
+	go SendMyElevInfo(channels.BcastChannel)
 	go UpdateLogFromNetwork(channels.RcvChannel)
 	//fmt.Printf("Network initialized\n")
 }
 
-func updateElevatorList(msg Log) {
+func updateElevatorList(msg Elev) {
 	//fmt.Println("In: ElevatorList")
 	//fmt.Println(ElevList)
-	var elev = msg.Elev
-	if len(ElevList) == 0 {
-		ElevList = append(ElevList, elev)
-	}
-	for _, i := range ElevList {
-		if elev.Id == i.Id {
-			i.Floor = elev.Floor
-			i.State = elev.State
+	//var elev = msg.Elev
+	for _, i := range OtherElevInfo {
+		if msg.Id == i.Id {
+			i.Floor = msg.Floor
+			i.CurrentOrder = msg.CurrentOrder
+			i.State = msg.State
+			i.Orders = msg.Orders
 			return
-		} else {
-			ElevList = append(ElevList, elev)
 		}
 	}
+	OtherElevInfo = append(OtherElevInfo, msg)
 
 }
 
-func updateQueueFromNetwork(msg Log) {
+func updateQueueFromNetwork(msg Elev) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
 			if msg.Orders[i][j].Finished == true {
-				OrderQueue[i][j].Status = -1
-			} else if msg.Orders[i][j].Status != -1 {
+				OrderQueue[i][j].Status = 2
+			} else if msg.Orders[i][j].Status != 2 {
 				OrderQueue[i][j].Status = msg.Orders[i][j].Status
 			}
 		}
 	}
-	//fmt.Println(msg.Orders)
-	//OrderQueue = msg.Orders
-
+	//DisplayUpdates = true
 }
 
 func GetMatrixDimensions() (rows, cols int) {
 	return numFloors, numButtons
 }
 
-func InitializeElevInfo(port int) {
-	ElevInfo.Id = port
-	ElevInfo.Floor = 0
-	ElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
-	ElevInfo.State = 0
+func InitializeElevInfo(id int) {
+	MyElevInfo.Id = id
+	MyElevInfo.Floor = 0
+	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
+	MyElevInfo.State = 0
+	MyElevInfo.Orders = OrderQueue
 }
 
 /*func UpdateElevInfo(floor *int, order *Order, state *int) {
@@ -206,8 +201,9 @@ func InitializeElevInfo(port int) {
 }*/
 
 func UpdateElevInfo(floor int, order Order, state int) {
-	ElevInfo.Floor = floor
-	ElevInfo.CurrentOrder = order
-	ElevInfo.State = state
-	Updates = true
+	MyElevInfo.Floor = floor
+	MyElevInfo.CurrentOrder = order
+	MyElevInfo.State = state
+	MyElevInfo.Orders = OrderQueue
+	DisplayUpdates = true
 }

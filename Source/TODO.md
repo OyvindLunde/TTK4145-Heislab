@@ -9,6 +9,7 @@
 
 - Prioritize CAB orders? Might fuck up costFunction thou. 
 - Mulig løsning: Når "ferdig i execute, se først etter cab orders før man går til IDLE". Dette for å unngå "trolls" som får heisen f.eks. til å kjøre opp og ned mellom 1. og 2. etg hele tiden. Løser ikke nødvendigvis problemer for feks. ned 4 etg, men vet heller ikke helt hva oppgaven krever.
+- Fikse State er laget to steder
 
 
 ### Litt lenger frem i tid

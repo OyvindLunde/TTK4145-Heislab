@@ -78,8 +78,9 @@ func BrodcastMessage(port int, chans ...interface{}) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		chosen, value, _ := reflect.Select(selectCases)
-		//fmt.Println("Sending:")
-		//fmt.Println(value)
+		/*fmt.Println("Sending:")
+		fmt.Println(value)
+		fmt.Println("_______________")*/
 		buf, _ := json.Marshal(value.Interface())
 		conn.WriteTo([]byte(typeNames[chosen]+string(buf)), addr)
 	}

@@ -7,8 +7,6 @@ import (
 	"./logmanagement"
 )
 
-// Network "doesnt work" (for Øyvind), Windows Firewall?
-
 // Changes made:
 // Modified StopAtFloor to also take in "Finished" variable
 // Commented out a line in FSM - IDLE that may fix our communication problem
@@ -17,9 +15,9 @@ import (
 func main() {
 	numFloors := 4
 	numButtons := 3
-	id := 3
-	port := 20009
-	addr := 11112
+	id := 1       // elevator id, change for each elevator
+	port := 20009 // address for network, do not change
+	addr := 11111 // address for tcp connection to simulator, change for each elevator
 
 	fsmChannels := fsm.FsmChannels{
 		ButtonPress:  make(chan elevio.ButtonEvent),
@@ -27,8 +25,8 @@ func main() {
 	}
 
 	networkChannels := logmanagement.NetworkChannels{
-		RcvChannel:   make(chan logmanagement.Log),
-		BcastChannel: make(chan logmanagement.Log),
+		RcvChannel:   make(chan logmanagement.Elev),
+		BcastChannel: make(chan logmanagement.Elev),
 	}
 
 	fsm.Initialize(numFloors, id, addr)
