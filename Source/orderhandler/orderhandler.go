@@ -4,16 +4,14 @@ package orderhandler
 // This Module contain functions for handeling local orders
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-
 import (
 	"math"
 	"time"
+
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
 )
-
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Advanced Getters
@@ -25,8 +23,8 @@ func GetPendingOrder() logmanagement.Order {
 	numButtons := logmanagement.GetNumButtons()
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
-			if logmanagement.GetOrder(i,j).Status == 0 {
-				return logmanagement.GetOrder(i,j)
+			if logmanagement.GetOrder(i, j).Status == 0 {
+				return logmanagement.GetOrder(i, j)
 			}
 		}
 	}
@@ -47,7 +45,6 @@ func GetDirection(currentfloor int, destination int) int {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // OrderHandling
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-
 
 /* Returns true if the elevator should stop when it reaches a floor*/
 func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.Elev, elevlist []logmanagement.Elev) bool {
@@ -72,14 +69,14 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 /*Stops elevator and updates LocalOrders acording to floor in param*/
 func StopAtFloor(floor int) {
 	for i := 0; i < 3; i++ {
-		status := int(logmanagement.GetOrder(floor,i).Status)
+		status := int(logmanagement.GetOrder(floor, i).Status)
 		if status != 2 {
 			UpdateLocalOrders(floor, i, status, true)
 		}
 	} // Nye ordrer i samme etg som kommer inn mens dørene er åpne: Rekker vi å sende at de ordrene er fullført?
 	elevcontroller.ElevStopAtFloor(floor)
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
-		if logmanagement.GetOrder(floor,i).Status != 2 {
+		if logmanagement.GetOrder(floor, i).Status != 2 {
 			UpdateLocalOrders(floor, i, int(logmanagement.INACTIVE), false)
 		}
 	}
@@ -105,7 +102,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 
 /* Updates the Local Orders*/
 func UpdateLocalOrders(floor int, button int, active int, finished bool) { // Må kanskje endre til active OrderStatus
-	logmanagement.SetOrder(floor,button,logmanagement.OrderStatus(active), finished)
+	logmanagement.SetOrder(floor, button, logmanagement.OrderStatus(active), finished)
 	logmanagement.DisplayUpdates = true
 }
 
@@ -115,7 +112,7 @@ func UpdateLights(numFloors int, numButtons int) {
 		time.Sleep(20 * time.Millisecond)
 		for i := 0; i < numFloors; i++ {
 			for j := 0; j < numButtons; j++ {
-				if logmanagement.GetOrder(i,j).Status == 2 {
+				if logmanagement.GetOrder(i, j).Status == 2 {
 					elevio.SetButtonLamp(elevio.ButtonType(j), i, false)
 				} else {
 					elevio.SetButtonLamp(elevio.ButtonType(j), i, true)
@@ -126,13 +123,16 @@ func UpdateLights(numFloors int, numButtons int) {
 
 }
 
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Cost Function
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 //Returns true if I shuold take order
 func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, destination int, elevlist []logmanagement.Elev) bool {
+	if int(order.ButtonType) == 2 {
+		return true
+	}
+
 	if destination == -1 || order.Status == 2 {
 		return false
 	}

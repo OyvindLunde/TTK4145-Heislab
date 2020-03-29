@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
 	"../network"
 )
 
@@ -33,7 +34,6 @@ const (
 	RESET   = 4
 )
 
-
 type Order struct {
 	Floor      int
 	ButtonType int
@@ -45,6 +45,7 @@ type Order struct {
 
 /*OrderStatus Enum*/
 type OrderStatus int
+
 const (
 	PENDING  OrderStatus = 0
 	ACTIVE   OrderStatus = 1
@@ -76,11 +77,11 @@ func GetOrder(floor int, buttonType int) Order {
 }
 
 func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
-	 MyElevInfo.Orders[floor][buttonType].Status = status
-	 MyElevInfo.Orders[floor][buttonType].Finished = finished
+	MyElevInfo.Orders[floor][buttonType].Status = status
+	MyElevInfo.Orders[floor][buttonType].Finished = finished
 }
 
-func GetOrderList() [numFloors][numButtons]Order{
+func GetOrderList() [numFloors][numButtons]Order {
 	return MyElevInfo.Orders
 }
 
@@ -105,7 +106,7 @@ func GetNumButtons() int {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*Initializes LogManagement*/
-func InitLogManagement(id int, numFloors int, numButtons int){
+func InitLogManagement(id int, numFloors int, numButtons int) {
 	numButtons = numButtons
 	numFloors = numFloors
 	InitializeMyElevInfo(id)
@@ -145,8 +146,6 @@ func InitCommunication(port int, channels NetworkChannels) {
 func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
-		//fmt.Println("Sending:")
-		//PrintOrderQueue(MyElevInfo.orders)
 		BcastChannel <- MyElevInfo
 	}
 }
@@ -158,8 +157,9 @@ func UpdateOtherElevListFromNetwork(RcvChannel chan Elev) {
 		select {
 		case a := <-RcvChannel:
 			if a.Id != MyElevInfo.Id {
-				fmt.Println("Receiving:")
+				fmt.Println("Received:")
 				PrintOrderQueue(a.Orders)
+				fmt.Println("_____________")
 				updateOtherElevInfo(a)
 				updateOrderList(a)
 			}
@@ -167,24 +167,24 @@ func UpdateOtherElevListFromNetwork(RcvChannel chan Elev) {
 	}
 }
 
-
-
 /*Updates otherelevinfo with info about elev in param*/
 func updateOtherElevInfo(msg Elev) {
-	for _, i := range OtherElevInfo {
-		if msg.Id == i.Id {
-			//fmt.Println("Correct ID")
-			i.Floor = msg.Floor
-			i.CurrentOrder = msg.CurrentOrder
-			i.State = msg.State
-			i.Orders = msg.Orders
+	for i := 0; i < len(OtherElevInfo); i++ {
+		if msg.Id == OtherElevInfo[i].Id {
+			OtherElevInfo[i].Floor = msg.Floor
+			OtherElevInfo[i].CurrentOrder = msg.CurrentOrder
+			OtherElevInfo[i].State = msg.State
+			OtherElevInfo[i].Orders = msg.Orders
+			fmt.Println("Other elevs orders:")
+			PrintOrderQueue(OtherElevInfo[0].Orders)
+			fmt.Println("__________")
 			return
 		}
 	}
 	OtherElevInfo = append(OtherElevInfo, msg)
+	DisplayUpdates = true
 
 }
-
 
 /*Updates orderlist with data stored in elev-param*/
 func updateOrderList(msg Elev) {
@@ -200,9 +200,6 @@ func updateOrderList(msg Elev) {
 	//DisplayUpdates = true
 }
 
-
-
-
 /*Updates MyElevInfo variable from params*/
 func UpdateMyElevInfo(floor int, order Order, state int) {
 	MyElevInfo.Floor = floor
@@ -211,11 +208,9 @@ func UpdateMyElevInfo(floor int, order Order, state int) {
 	DisplayUpdates = true
 }
 
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Dev functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-
 
 func PrintOrderQueue(queue [numFloors][numButtons]Order) {
 	fmt.Println("Orders:")
