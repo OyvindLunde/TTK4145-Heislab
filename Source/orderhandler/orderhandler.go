@@ -7,7 +7,8 @@ package orderhandler
 import (
 	"math"
 	"time"
-
+	"fmt"
+	
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
@@ -67,7 +68,7 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 }
 
 /*Stops elevator and updates LocalOrders acording to floor in param*/
-func StopAtFloor(floor int) {
+func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
 	for i := 0; i < 3; i++ {
 		status := int(logmanagement.GetOrder(floor, i).Status)
 		if status != 2 {
@@ -78,12 +79,14 @@ func StopAtFloor(floor int) {
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
 		if logmanagement.GetOrder(floor, i).Status != 2 {
 			UpdateLocalOrders(floor, i, int(logmanagement.INACTIVE), false)
+			light := elevio.PanelLight{Floor: floor, Button: elevio.ButtonType(i), Value: false}
+				lightsChannel <- light
 		}
 	}
 }
 
 /*Trenger vi egt denne?*/
-func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
+func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<- elevio.PanelLight) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
@@ -92,6 +95,8 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == 2 {
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false)
+				light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
+				lightsChannel <- light
 				//elevio.SetButtonLamp(a.Button, a.Floor, true)
 				logmanagement.DisplayUpdates = true
 			}
@@ -120,7 +125,18 @@ func UpdateLights(numFloors int, numButtons int) {
 			}
 		}
 	}
+}
 
+/*Updates local lights acording to orders*/
+func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
+	for {
+		time.Sleep(20 * time.Millisecond)
+		select{
+		case a := <-lightschannel:
+			fmt.Println(a)
+			elevio.SetButtonLamp(a.Button,a.Floor, a.Value)
+		}
+	}
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

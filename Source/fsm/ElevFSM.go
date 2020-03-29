@@ -30,6 +30,7 @@ const (
 type FsmChannels struct {
 	ButtonPress  chan elevio.ButtonEvent
 	FloorReached chan int
+	ToggleLights chan elevio.PanelLight
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -54,8 +55,8 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 
 	go elevio.PollButtons(channels.ButtonPress) // Kan vi legge denne inn i HandleButtonEvents?
 	go elevio.PollFloorSensor(channels.FloorReached)
-	go orderhandler.HandleButtonEvents(channels.ButtonPress)
-	go orderhandler.UpdateLights(numFloors, numButtons)
+	go orderhandler.HandleButtonEvents(channels.ButtonPress, channels.ToggleLights)
+	go orderhandler.UpdateLightsV2(channels.ToggleLights)
 	//go logmanagement.UpdateMyElevInfo(&floor, &currentOrder, &state) // Vurdere å droppe denne? Kjører unødvendig ofte
 
 	for {
@@ -82,7 +83,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
 				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.MyElevInfo, logmanagement.OtherElevInfo) {
-					orderhandler.StopAtFloor(floor)
+					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
 					if dir == 0 { // Forslag: Legge inn en CheckForCABOrders funksjon, må i så fall inn i default også
@@ -94,7 +95,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 
 			default:
 				if dir == 0 {
-					orderhandler.StopAtFloor(floor)
+					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					state = IDLE
 					logmanagement.UpdateMyElevInfo(floor, NoOrder, state)
 				}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"../network"
+	"../elevio"
 )
 
 const numFloors = 4
@@ -130,11 +131,11 @@ func InitializeMyElevInfo(id int) {
 }
 
 /*Inits network communication*/
-func InitCommunication(port int, channels NetworkChannels) {
+func InitCommunication(port int, channels NetworkChannels, toggleLights chan elevio.PanelLight) {
 	go network.RecieveMessage(port, channels.RcvChannel)
 	go network.BrodcastMessage(port, channels.BcastChannel)
 	go SendMyElevInfo(channels.BcastChannel)
-	go UpdateOtherElevListFromNetwork(channels.RcvChannel)
+	go UpdateOtherElevListFromNetwork(channels.RcvChannel, toggleLights)
 	fmt.Printf("Network initialized\n")
 }
 
@@ -151,17 +152,17 @@ func SendMyElevInfo(BcastChannel chan Elev) {
 }
 
 /*Updates OtherElevLsit from channel in parameter*/
-func UpdateOtherElevListFromNetwork(RcvChannel chan Elev) {
+func UpdateOtherElevListFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
 			if a.Id != MyElevInfo.Id {
-				fmt.Println("Received:")
+				/*fmt.Println("Received:")
 				PrintOrderQueue(a.Orders)
-				fmt.Println("_____________")
+				fmt.Println("_____________")*/
 				updateOtherElevInfo(a)
-				updateOrderList(a)
+				updateOrderList(a, lightsChannel)
 			}
 		}
 	}
@@ -175,9 +176,9 @@ func updateOtherElevInfo(msg Elev) {
 			OtherElevInfo[i].CurrentOrder = msg.CurrentOrder
 			OtherElevInfo[i].State = msg.State
 			OtherElevInfo[i].Orders = msg.Orders
-			fmt.Println("Other elevs orders:")
+			/*fmt.Println("Other elevs orders:")
 			PrintOrderQueue(OtherElevInfo[0].Orders)
-			fmt.Println("__________")
+			fmt.Println("__________")*/
 			return
 		}
 	}
@@ -187,13 +188,25 @@ func updateOtherElevInfo(msg Elev) {
 }
 
 /*Updates orderlist with data stored in elev-param*/
-func updateOrderList(msg Elev) {
+func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
-			if msg.Orders[i][j].Finished == true {
-				MyElevInfo.Orders[i][j].Status = 2
-			} else if msg.Orders[i][j].Status != 2 {
-				MyElevInfo.Orders[i][j].Status = msg.Orders[i][j].Status
+			if msg.Orders[i][j].Finished == true && MyElevInfo.Orders[i][j].Status != 2 {
+				fmt.Println("case 1")
+				MyElevInfo.Orders[i][j].Status = 2 
+				// Replace with finished chan
+				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
+				lightsChannel <-light
+			} else if msg.Orders[i][j].Status == 0 && MyElevInfo.Orders[i][j].Status == 2 {
+				fmt.Println("case 2")
+				MyElevInfo.Orders[i][j].Status = 0
+				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
+				lightsChannel <-light
+			} else if msg.Orders[i][j].Status == 1 && MyElevInfo.Orders[i][j].Status == 0 && msg.Orders[i][j].Finished == false {
+				fmt.Println("case 3")
+				MyElevInfo.Orders[i][j].Status = 1
+				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
+				lightsChannel <-light
 			}
 		}
 	}
