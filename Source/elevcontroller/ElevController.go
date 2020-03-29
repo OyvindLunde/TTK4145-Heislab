@@ -1,18 +1,15 @@
 package elevcontroller
 
 import (
+	"fmt"
+	"strconv"
 	"time"
 
 	"../elevio"
 )
 
-var ButtonPress chan elevio.ButtonEvent
-var FloorReached chan int
-
-type Button struct {
-	Floor int
-	Type  int
-}
+//var ButtonPress chan elevio.ButtonEvent
+//var FloorReached chan int
 
 func initializeLights(numFloors int) {
 	for i := 0; i < numFloors; i++ {
@@ -28,8 +25,10 @@ func initializeLights(numFloors int) {
 
 }
 
-func InitializeElevator(numFloors int) {
-	elevio.Init("localhost:15657", numFloors)
+func InitializeElevator(numFloors int, port int) {
+	fmt.Println("localhost:" + strconv.Itoa(port))
+	elevio.Init("localhost:"+strconv.Itoa(port), numFloors)
+	//elevio.Init("localhost:15657", numFloors)
 	initializeLights(numFloors)
 	elevio.SetMotorDirection(elevio.MD_Down)
 	for elevio.GetFloor() != 0 { //Fix getFloor problemet
@@ -43,18 +42,7 @@ func InitializeElevator(numFloors int) {
 	go elevio.PollFloorSensor(FloorReached)*/
 }
 
-func ButtonPressed(receiver chan<- Button) {
-	for {
-		ButtonPress := make(chan elevio.ButtonEvent)
-		elevio.PollButtons(ButtonPress)
-		select {
-		case a := <-ButtonPress:
-			receiver <- Button{Floor: a.Floor, Type: int(a.Button)}
-		}
-	}
-}
-
-func FloorIsReached(receiver chan<- int) {
+func FloorIsReached(receiver chan<- int) { // Unused?
 	for {
 		FloorReached := make(chan int)
 		elevio.PollFloorSensor(FloorReached)
@@ -74,8 +62,4 @@ func OpenCloseDoor(seconds time.Duration) {
 func ElevStopAtFloor(floor int) {
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	OpenCloseDoor(3)
-}
-
-func UpdateLight(button Button, value bool) {
-	elevio.SetButtonLamp(elevio.ButtonType(button.Type), button.Floor, value)
 }

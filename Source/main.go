@@ -1,11 +1,38 @@
 package main
 
 import (
+	"./elevio"
 	"./fsm"
+	"./logmanagement"
 )
+
+// Changes made:
+// Modified StopAtFloor to also take in "Finished" variable
+// Commented out a line in FSM - IDLE that may fix our communication problem
+// Made an alternative UpdateElevInfo, that is not a goroutine, but instead only is called when something is changed (pings the system less, which is nice)
 
 func main() {
 	numFloors := 4
-	fsm.Initialize(numFloors)
-	fsm.RunElevator()
+	numButtons := 3
+	id := 1       // elevator id, change for each elevator
+	port := 20009 // address for network, do not change
+	addr := 11111 // address for tcp connection to simulator, change for each elevator
+
+	fsmChannels := fsm.FsmChannels{
+		ButtonPress:  make(chan elevio.ButtonEvent),
+		FloorReached: make(chan int),
+	}
+
+	networkChannels := logmanagement.NetworkChannels{
+		RcvChannel:   make(chan logmanagement.Elev),
+		BcastChannel: make(chan logmanagement.Elev),
+	}
+
+	fsm.Initialize(numFloors, id, addr)
+	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
+	go logmanagement.Communication(port, networkChannels)
+
+	//go display.Display()
+
+	select {}
 }

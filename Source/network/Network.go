@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var port string
@@ -25,14 +26,18 @@ func RecieveMessage(port int, chans ...interface{}) {
 	var buf [1024]byte
 	conn := dialBroadcastUDP(port)
 	for {
+		time.Sleep(20 * time.Millisecond)
+		//fmt.Println("In: Receive msg")
 		n, _, _ := conn.ReadFrom(buf[0:])
 		for _, ch := range chans {
 			T := reflect.TypeOf(ch).Elem()
 			typeName := T.String()
+			//fmt.Printf(typeName)
 			if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
 				v := reflect.New(T)
+				//fmt.Println("Receiving:")
+				//fmt.Println(v)
 				json.Unmarshal(buf[len(typeName):n], v.Interface())
-
 				reflect.Select([]reflect.SelectCase{{
 					Dir:  reflect.SelectSend,
 					Chan: reflect.ValueOf(ch),
@@ -49,13 +54,14 @@ func RecieveMessage(port int, chans ...interface{}) {
  * @param chans; channels to send messages on
  */
 func BrodcastMessage(port int, chans ...interface{}) {
-	checkArgs(chans...)
 
+	//fmt.Printf("typeName")
+	checkArgs(chans...)
 	n := 0
 	for range chans {
 		n++
 	}
-
+	//fmt.Println("typeName")
 	selectCases := make([]reflect.SelectCase, n)
 	typeNames := make([]string, n)
 	for i, ch := range chans {
@@ -70,7 +76,11 @@ func BrodcastMessage(port int, chans ...interface{}) {
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
 
 	for {
+		time.Sleep(20 * time.Millisecond)
 		chosen, value, _ := reflect.Select(selectCases)
+		/*fmt.Println("Sending:")
+		fmt.Println(value)
+		fmt.Println("_______________")*/
 		buf, _ := json.Marshal(value.Interface())
 		conn.WriteTo([]byte(typeNames[chosen]+string(buf)), addr)
 	}

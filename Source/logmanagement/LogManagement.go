@@ -2,199 +2,209 @@ package logmanagement
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
-	network "../network"
+	"../network"
 )
 
 const numFloors = 4
 const numButtons = 3
 
-var id string
+//var Id int
 
 /*State enum*/
-type State int
+type State int // Kanskje slette denne? Eksisterer i FSM også
 
 const (
-	Idle = 0
-	Exec = 1
-	Lost = 2
+	INIT    = 0
+	IDLE    = 1
+	EXECUTE = 2
+	LOST    = 3
+	RESET   = 4
 )
 
-/*OrderStruct*/
 type Order struct {
-	floor      int //Remove
-	ButtonType int //Remove
-	active     int
-	// Timer?
+	Floor      int
+	ButtonType int
+	Status     OrderStatus // Rename to status
+	Finished   bool
+	// Timer   timer
+	// Confirmed bool
 }
+
+type OrderStatus int
+
+const (
+	PENDING  OrderStatus = 0
+	ACTIVE   OrderStatus = 1
+	INACTIVE OrderStatus = 2
+	// ACTIVE = ID?
+)
 
 /*Elevstruct for keeping info about ther elevs*/
 type Elev struct {
-	id    string
-	floor int
+	Id           int //endret fra string
+	Floor        int
+	CurrentOrder Order
 	//Lastseen time
-	state int
+	State  int
+	Orders [numFloors][numButtons]Order
 }
+
+// LogList? Må kunne sende en reset heis cab orders
 
 /*Log to be sendt over the network*/
-type log struct {
-	orders  []Order
-	Elev Elev
-	//version time
-}
 
 /*Declaration of local log*/
-var log1 log
 
-var elevList []Elev
+var MyElevInfo Elev
+var OtherElevInfo []Elev
 
 /*Broadcast and recieve channel*/
-var RcvChannel chan log
-var bcastChannel chan log
-
-func NewOrder(floor int, buttonType int, active int) Order { // Overflødig per nå
-	order := Order{Floor: floor, ButtonType: buttonType, Active: active}
-	return order
+type NetworkChannels struct {
+	RcvChannel   chan Elev
+	BcastChannel chan Elev
 }
 
-var OrderQueue = &[numFloors][numButtons]Order{}
+//var RcvChannel chan Log
+//var bcastChannel chan Log
 
-func InitializeQueue(queue *[numFloors][numButtons]Order) {
+var OrderQueue = [numFloors][numButtons]Order{}
+
+var DisplayUpdates = false // Used to display the system
+
+func InitializeQueue() {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
-			//queue[i][j] = nil
-			queue[i][j].Floor = i
-			queue[i][j].ButtonType = j
-			queue[i][j].Active = -1
+			OrderQueue[i][j].Floor = i
+			OrderQueue[i][j].ButtonType = j
+			OrderQueue[i][j].Status = 2
+			OrderQueue[i][j].Finished = false
 		}
 	}
+	fmt.Println("OrderQueue initialized")
+	//fmt.Println(OrderStatus(ACTIVE))
 }
-
-/*func CheckForOrders(queue *[numFloors][numButtons]Order, receiver chan<- Order) { // Velger den første i lista, ikke den eldste ordren
-	for { // Legg i orderHandler?
-		time.Sleep(20 * time.Millisecond)
-		for i := 0; i < numFloors; i++ {
-			for j := 0; j < numButtons; j++ {
-				if queue[i][j].Active == 0 {
-					fmt.Printf("%+v\n", queue[i][j])
-					receiver <- queue[i][j]
-				}
-			}
-		}
-	}
-}*/
-
-// UpdateOrderQueue updates the order queue
-func UpdateOrderQueue(floor int, button int, active int) {
-	OrderQueue[floor][button].Active = active
-}
-
-// GetActiveOrder returns the first found active order
 
 func GetOrder(floor int, buttonType int) Order {
 	return OrderQueue[floor][buttonType]
 }
 
-func SetOrder(floor int, buttonType int, value int) {
-	OrderQueue[floor][buttonType] = NewOrder(floor, buttonType, value)
+func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
+	return elev.Id, elev.Floor, elev.CurrentOrder, elev.State
 }
 
 /**
  * @brief puts message on bcastChannel
  * @param Message; message to be transmitted
  */
-func UpdateLogFromLocal() {
-	var message log
-	message.orders = createOrderListFromOrderQueue()
-	message.Elev = elevList[0]
+func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
-		bcastChannel <- message
-		time.Sleep(1 * time.Second)
+		time.Sleep(20 * time.Millisecond)
+		fmt.Println("Sending:")
+		PrintOrderQueue(OrderQueue)
+		BcastChannel <- MyElevInfo
 	}
 }
 
 /**
  * @brief reads message from RcvChannel and does hit width it
  */
-func UpdateLogFromNetwork() {
+func UpdateLogFromNetwork(RcvChannel chan Elev) {
 	for {
-		a := <-RcvChannel
-		updateElevatorQueue(a)
-		updateOrderQueue(a)
-		fmt.Printf("Received: %#v\n", a)
-	}
-}
-
-/**
- * @brief initiates channels and creates coroutines for brodcasting and recieving
- * @param port; port to listen and read on
- */
-func InitNetwork(port int) {
-	RcvChannel = make(chan log)
-	bcastChannel = make(chan log)
-	go network.BrodcastMessage(port, bcastChannel)
-	go network.RecieveMessage(port, RcvChannel)
-	fmt.Printf("log initialized\n")
-}
-
-/**
- * @brief Set id of elev.
- */
-/*func setElevID() {
-
-	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
-
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
-	if id == "" {
-		localIP, err := localip.LocalIP()
-		if err != nil {
-			fmt.Println(err)
-			localIP = "DISCONNECTED"
+		time.Sleep(20 * time.Millisecond)
+		select {
+		case a := <-RcvChannel:
+			//fmt.Printf("Received: %#v\n", a.Elev.Id)
+			if a.Id != MyElevInfo.Id {
+				//fmt.Println("Receiving:")
+				//PrintOrderQueue(a.Orders)
+				updateElevatorList(a)
+				updateQueueFromNetwork(a)
+			}
 		}
-		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
-}*/
+}
 
-func updateElevatorQueue(msg log) {
-	var elev = msg.Elev
-	for _, i := range elevList {
-		if elev.id == i.id {
-			i.floor = elev.floor
-			i.state = elev.state
+func PrintOrderQueue(queue [numFloors][numButtons]Order) {
+	fmt.Println("Orders:")
+	for i := numFloors - 1; i >= 0; i-- {
+		string := strconv.Itoa(int(queue[i][0].Status)) + strconv.Itoa(int(queue[i][1].Status)) + strconv.Itoa(int(queue[i][2].Status))
+		fmt.Println(string)
+	}
+	fmt.Println("____________")
+}
+
+func Communication(port int, channels NetworkChannels) {
+	//RcvChannel := make(chan Log)
+	//bcastChannel := make(chan Log)
+
+	go network.RecieveMessage(port, channels.RcvChannel)
+	go network.BrodcastMessage(port, channels.BcastChannel)
+	go SendMyElevInfo(channels.BcastChannel)
+	go UpdateLogFromNetwork(channels.RcvChannel)
+	//fmt.Printf("Network initialized\n")
+}
+
+func updateElevatorList(msg Elev) {
+	//fmt.Println("In: ElevatorList")
+	//PrintOrderQueue(msg.Orders)
+	for _, i := range OtherElevInfo {
+		if msg.Id == i.Id {
+			//fmt.Println("Correct ID")
+			i.Floor = msg.Floor
+			i.CurrentOrder = msg.CurrentOrder
+			i.State = msg.State
+			i.Orders = msg.Orders
 			return
-		}else{
-			elevList = append(elevList, elev)
 		}
 	}
+	OtherElevInfo = append(OtherElevInfo, msg)
+
 }
 
-func updateOrderQueue(msg log) {
-	for  _, order := range msg.orders{
-		OrderQueue[order.floor][order.ButtonType].active = order.active
-	}
-	
-}
-
-func createOrderListFromOrderQueue() []order {
-	listedOrders []order
-	for  i := range OrderQueue {
-        for k := range i{
-			var temp order
-			temp.floor = i
-			temp.buttonType = k
-			temp.active = OrderQueue[i][k].active
-			listedOrders = append(listedOrders, temp)
+func updateQueueFromNetwork(msg Elev) {
+	for i := 0; i < numFloors; i++ {
+		for j := 0; j < numButtons-1; j++ {
+			if msg.Orders[i][j].Finished == true {
+				OrderQueue[i][j].Status = 2
+			} else if msg.Orders[i][j].Status != 2 {
+				OrderQueue[i][j].Status = msg.Orders[i][j].Status
+			}
 		}
 	}
-	return listedOrders
-	
+	//DisplayUpdates = true
 }
+
 func GetMatrixDimensions() (rows, cols int) {
 	return numFloors, numButtons
+}
+
+func InitializeElevInfo(id int) {
+	MyElevInfo.Id = id
+	MyElevInfo.Floor = 0
+	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
+	MyElevInfo.State = 0
+	MyElevInfo.Orders = OrderQueue
+}
+
+/*func UpdateElevInfo(floor *int, order *Order, state *int) {
+	for {
+		time.Sleep(5 * time.Millisecond)
+		ElevInfo.Floor = *floor
+		ElevInfo.CurrentOrder = *order
+		ElevInfo.State = *state
+		//fmt.Println(ElevInfo)
+
+	}
+
+}*/
+
+func UpdateElevInfo(floor int, order Order, state int) {
+	MyElevInfo.Floor = floor
+	MyElevInfo.CurrentOrder = order
+	MyElevInfo.State = state
+	MyElevInfo.Orders = OrderQueue
+	DisplayUpdates = true
 }

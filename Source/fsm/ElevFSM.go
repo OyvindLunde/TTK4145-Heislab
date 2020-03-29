@@ -1,156 +1,96 @@
 package fsm
 
 import (
+	"fmt"
+	"time"
+
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
 	"../orderhandler"
 )
 
-type State string
+type State int
 
 const (
-	INIT    = "INIT"
-	IDLE    = "IDLE"
-	EXECUTE = "EXECUTE"
-	RESET   = "RESET"
+	INIT    = 0
+	IDLE    = 1
+	EXECUTE = 2
+	LOST    = 3
+	RESET   = 4
 )
 
-func Initialize(numFloors int) {
-	elevio.Init("localhost:15657", numFloors)
-	elevcontroller.InitializeLights(numFloors)
-	elevcontroller.InitializeElevator()
-	elevio.SetFloorIndicator(0) // Evt fix løpende update senere
-	orderhandler.InitOrderHandler(15647)
-	
+type FsmChannels struct {
+	ButtonPress  chan elevio.ButtonEvent
+	FloorReached chan int
 }
 
-func RunElevator() {
-	destination := -1
-	dir := 0   // declared to make code run, prob might delete later
-	floor := 0 // same
-	state := IDLE
-
-	ButtonPressed := make(chan elevio.ButtonEvent)
-	FloorReached := make(chan int)
-
-	go elevio.PollButtons(ButtonPressed)
-	go elevio.PollFloorSensor(FloorReached)
-	go orderhandler.HandleButtonEvents()
-
-	for {
-		switch state {
-		case IDLE:
-			destination = orderhandler.GetDestination() //tentativt navn
-			if destination != -1 {
-				//ShouldITakeOrder()
-				dir = orderhandler.GetMotorDirection(floor, destination)
-				state = EXECUTE
-			}
-
-		case EXECUTE:
-			elevio.SetMotorDirection(elevio.MotorDirection(dir))
-			select {
-			case a := <-ButtonPressed:
-				if logmanagement.GetOrder(a.Floor, int(a.Button)).Active == -1 {
-					logmanagement.UpdateOrderQueue(a.Floor, int(a.Button), 0)
-					elevio.SetButtonLamp(a.Button, a.Floor, true)
-				}
-
-			case floorReached := <-FloorReached:
-				floor = floorReached
-				elevio.SetFloorIndicator(floor)
-				if orderhandler.ShouldElevatorStop(floor, destination) {
-					elevcontroller.ElevStopAtFloor(floor)
-					orderhandler.ClearOrdersAtFloor(floor)
-					dir = orderhandler.GetMotorDirection(floor, destination)
-					elevio.SetMotorDirection(elevio.MotorDirection(dir))
-					if dir == 0 {
-						destination = -1
-						state = IDLE
-					}
-				}
-			default:
-				if dir == 0 {
-					elevcontroller.OpenCloseDoor(3)
-					orderhandler.ClearOrdersAtFloor(floor)
-					state = IDLE
-				}
-			}
-
-		case RESET:
-			//reset elevator
-
-		}
-
-	}
-
+func Initialize(numFloors int, id int, addr int) {
+	elevcontroller.InitializeElevator(numFloors, addr)
+	elevio.SetFloorIndicator(0)
+	//logmanagement.InitializeElevInfo()
+	orderhandler.InitOrderHandler(id)
 }
 
-/*func RunElevator() {
-	destination := -1
-	dir := 0   // declared to make code run, prob might delete later
-	floor := 0 // same
+func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
+	fmt.Println("Hello")
+	//destination := -1
+	dir := 0
+	floor := 0
 	state := IDLE
+	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
+	currentOrder := NoOrder
 
-	ButtonPressed := make(chan elevio.ButtonEvent)
-	FloorReached := make(chan int)
-
-	go elevio.PollButtons(ButtonPressed)
-	go elevio.PollFloorSensor(FloorReached)
+	go elevio.PollButtons(channels.ButtonPress) // Kan vi legge denne inn i HandleButtonEvents?
+	go elevio.PollFloorSensor(channels.FloorReached)
+	go orderhandler.HandleButtonEvents(channels.ButtonPress)
+	go orderhandler.UpdateLights(numFloors, numButtons)
+	//go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state) // Vurdere å droppe denne? Kjører unødvendig ofte
 
 	for {
+		time.Sleep(20 * time.Millisecond)
+		/*if len(logmanagement.OtherElevInfo) > 0 {
+			logmanagement.PrintOrderQueue(logmanagement.OtherElevInfo[0].Orders)
+		}*/
 		switch state {
 		case IDLE:
-			destination = orderhandler.ShouldElevatorExecuteOrder() //tentativt navn
-			if destination != -1 {
-				dir = orderhandler.GetMotorDirection(floor, destination)
-				state = EXECUTE
-			}
-			select {
-			case a := <-ButtonPressed:
-				if logmanagement.GetOrder(a.Floor, int(a.Button)).Active == -1 {
-					logmanagement.UpdateOrderQueue(a.Floor, int(a.Button), 0)
-					elevio.SetButtonLamp(a.Button, a.Floor, true)
-				}
-
-			default:
-				newOrder := logmanagement.GetPendingOrder()
-				if newOrder.Active == 0 {
-					logmanagement.UpdateOrderQueue(newOrder.Floor, newOrder.ButtonType, 1)
-					destination = newOrder.Floor
-					dir = orderhandler.GetMotorDirection(floor, destination)
+			currentOrder = orderhandler.GetPendingOrder()
+			if currentOrder != NoOrder {
+				//destination = orderhandler.GetDestination(currentOrder)
+				// currentOrder.Status = 1 // Tror denne linjen er kilden til kommunikasjonsproblemet vårt
+				ElevList := orderhandler.GetElevList() // ElevList er public så trenger egt ikke denne?
+				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, currentOrder.Floor, ElevList) {
+					currentOrder.Status = 1
+					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
+					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					state = EXECUTE
+					logmanagement.UpdateElevInfo(floor, currentOrder, state)
 				}
 			}
 
 		case EXECUTE:
-			elevio.SetMotorDirection(elevio.MotorDirection(dir))
+			elevio.SetMotorDirection(elevio.MotorDirection(dir)) // Blir kalt (unødvendig) mange ganger. Men er "sikker"
 			select {
-			case a := <-ButtonPressed:
-				if logmanagement.GetOrder(a.Floor, int(a.Button)).Active == -1 {
-					logmanagement.UpdateOrderQueue(a.Floor, int(a.Button), 0)
-					elevio.SetButtonLamp(a.Button, a.Floor, true)
-				}
-
-			case floorReached := <-FloorReached:
-				floor = floorReached
+			case a := <-channels.FloorReached:
+				floor = a
+				logmanagement.UpdateElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
-				if orderhandler.ShouldElevatorStop(floor, destination) {
-					elevcontroller.ElevStopAtFloor(floor)
-					orderhandler.ClearOrdersAtFloor(floor)
-					dir = orderhandler.GetMotorDirection(floor, destination)
+				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.MyElevInfo, logmanagement.OtherElevInfo) {
+					orderhandler.StopAtFloor(floor)
+					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
-					if dir == 0 {
-						destination = -1
+					if dir == 0 { // Forslag: Legge inn en CheckForCABOrders funksjon, må i så fall inn i default også
+						//destination = -1 // Unødvendig?
 						state = IDLE
+						logmanagement.UpdateElevInfo(floor, NoOrder, state)
 					}
 				}
+
 			default:
 				if dir == 0 {
-					elevcontroller.OpenCloseDoor(3)
-					orderhandler.ClearOrdersAtFloor(floor)
+					orderhandler.StopAtFloor(floor)
 					state = IDLE
+					logmanagement.UpdateElevInfo(floor, NoOrder, state)
 				}
 			}
 
@@ -158,7 +98,5 @@ func RunElevator() {
 			//reset elevator
 
 		}
-
 	}
-
-} */
+}
