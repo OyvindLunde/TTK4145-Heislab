@@ -76,7 +76,7 @@ func Display() {
 				paintScreen(w, sz, lightGray, blue0) // Paint background and border of screen in the selected colors
 				displayOrderExplanations(w, orderExpl)
 				//fmt.Println(&logmanagement.ElevInfo)
-				displayLocalElevator(w, s, elevStatic, logmanagement.OrderQueue, logmanagement.MyElevInfo, arrow)
+				displayLocalElevator(w, s, elevStatic, logmanagement.GetOrderList(), logmanagement.MyElevInfo, arrow)
 				displayOtherElevators(w, s, elevStatic, logmanagement.OtherElevInfo, arrow)
 
 			case size.Event: // Do not remove this

@@ -10,11 +10,17 @@ import (
 const numFloors = 4
 const numButtons = 3
 
-//var Id int
+var MyElevInfo Elev
+var OtherElevInfo []Elev
+
+var DisplayUpdates = false // Used to display the system
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Declaration of structs and Enums
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*State enum*/
 type State int // Kanskje slette denne? Eksisterer i FSM også
-
 const (
 	INIT    = 0
 	IDLE    = 1
@@ -22,6 +28,7 @@ const (
 	LOST    = 3
 	RESET   = 4
 )
+
 
 type Order struct {
 	Floor      int
@@ -32,8 +39,8 @@ type Order struct {
 	// Confirmed bool
 }
 
+/*OrderStatus Enum*/
 type OrderStatus int
-
 const (
 	PENDING  OrderStatus = 0
 	ACTIVE   OrderStatus = 1
@@ -51,39 +58,15 @@ type Elev struct {
 	Orders [numFloors][numButtons]Order
 }
 
-// LogList? Må kunne sende en reset heis cab orders
-
-/*Log to be sendt over the network*/
-
-/*Declaration of local log*/
-
-var MyElevInfo Elev
-var OtherElevInfo []Elev
-
 /*Broadcast and recieve channel*/
 type NetworkChannels struct {
 	RcvChannel   chan Elev
 	BcastChannel chan Elev
 }
 
-//var RcvChannel chan Log
-//var bcastChannel chan Log
-
-
-var DisplayUpdates = false // Used to display the system
-
-/*func InitializeQueue(elev Elev) {
-	for i := 0; i < numFloors; i++ {
-		for j := 0; j < numButtons; j++ {
-			elev.orders[i][j].Floor = i
-			elev.orders[i][j].ButtonType = j
-			elev.orders[i][j].Status = 2
-			elev.orders[i][j].Finished = false
-		}
-	}
-	fmt.Println("Orders initialized")
-}*/
-
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Setters and Getters
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 func GetOrder(floor int, buttonType int) Order {
 	return MyElevInfo.Orders[floor][buttonType]
 }
@@ -93,14 +76,19 @@ func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
 	 MyElevInfo.Orders[floor][buttonType].Finished = finished
 }
 
+func GetOrderList() [numFloors][numButtons]Order{
+	return MyElevInfo.Orders
+}
+
 func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 	return elev.Id, elev.Floor, elev.CurrentOrder, elev.State
 }
 
-/**
- * @brief puts message on bcastChannel
- * @param Message; message to be transmitted
- */
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Logic functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*Sends MyElevInfo on channel in parameter*/
 func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
@@ -110,48 +98,32 @@ func SendMyElevInfo(BcastChannel chan Elev) {
 	}
 }
 
-/**
- * @brief reads message from RcvChannel and does hit width it
- */
-func UpdateLogFromNetwork(RcvChannel chan Elev) {
+/*Updates OtherElevLsit from channel in parameter*/
+func UpdateOtherElevListFromNetwork(RcvChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
-			//fmt.Printf("Received: %#v\n", a.Elev.Id)
 			if a.Id != MyElevInfo.Id {
 				fmt.Println("Receiving:")
 				PrintOrderQueue(a.Orders)
-				updateElevatorList(a)
+				updateOtherElevInfo(a)
 				updateQueueFromNetwork(a)
 			}
 		}
 	}
 }
 
-func PrintOrderQueue(queue [numFloors][numButtons]Order) {
-	fmt.Println("Orders:")
-	for i := numFloors - 1; i >= 0; i-- {
-		string := strconv.Itoa(int(queue[i][0].Status)) + strconv.Itoa(int(queue[i][1].Status)) + strconv.Itoa(int(queue[i][2].Status))
-		fmt.Println(string)
-	}
-	fmt.Println("____________")
-}
-
-func Communication(port int, channels NetworkChannels) {
-	//RcvChannel := make(chan Log)
-	//bcastChannel := make(chan Log)
-
+/*Inits network communication*/
+func InitCommunication(port int, channels NetworkChannels) {
 	go network.RecieveMessage(port, channels.RcvChannel)
 	go network.BrodcastMessage(port, channels.BcastChannel)
 	go SendMyElevInfo(channels.BcastChannel)
-	go UpdateLogFromNetwork(channels.RcvChannel)
-	//fmt.Printf("Network initialized\n")
+	go UpdateOtherElevListFromNetwork(channels.RcvChannel)
+	fmt.Printf("Network initialized\n")
 }
 
-func updateElevatorList(msg Elev) {
-	//fmt.Println("In: ElevatorList")
-	//PrintOrderQueue(msg.Orders)
+func updateOtherElevInfo(msg Elev) {
 	for _, i := range OtherElevInfo {
 		if msg.Id == i.Id {
 			//fmt.Println("Correct ID")
@@ -199,21 +171,24 @@ func InitializeElevInfo(id int) {
 	fmt.Println("MyElev initialized")
 }
 
-/*func UpdateElevInfo(floor *int, order *Order, state *int) {
-	for {
-		time.Sleep(5 * time.Millisecond)
-		ElevInfo.Floor = *floor
-		ElevInfo.CurrentOrder = *order
-		ElevInfo.State = *state
-		//fmt.Println(ElevInfo)
-
-	}
-
-}*/
-
 func UpdateElevInfo(floor int, order Order, state int) {
 	MyElevInfo.Floor = floor
 	MyElevInfo.CurrentOrder = order
 	MyElevInfo.State = state
 	DisplayUpdates = true
+}
+
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Dev functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+func PrintOrderQueue(queue [numFloors][numButtons]Order) {
+	fmt.Println("Orders:")
+	for i := numFloors - 1; i >= 0; i-- {
+		string := strconv.Itoa(int(queue[i][0].Status)) + strconv.Itoa(int(queue[i][1].Status)) + strconv.Itoa(int(queue[i][2].Status))
+		fmt.Println(string)
+	}
+	fmt.Println("____________")
 }

@@ -36,7 +36,7 @@ func main() {
 
 	fsm.Initialize(numFloors, id, addr)
 	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
-	go logmanagement.Communication(port, networkChannels)
+	go logmanagement.InitCommunication(port, networkChannels)
 
 	go display.Display()
 
