@@ -102,8 +102,8 @@ func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
-		fmt.Println("Sending:")
-		PrintOrderQueue(OrderQueue)
+		//fmt.Println("Sending:")
+		//PrintOrderQueue(OrderQueue)
 		BcastChannel <- MyElevInfo
 	}
 }
