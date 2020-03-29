@@ -31,6 +31,12 @@ const (
 	BT_Cab                 = 2
 )
 
+type PanelLight struct {
+	Floor  int
+	Button ButtonType
+	Value  bool
+}
+
 type ButtonEvent struct {
 	Floor  int
 	Button ButtonType

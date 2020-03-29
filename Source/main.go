@@ -27,6 +27,7 @@ func main() {
 	fsmChannels := fsm.FsmChannels{
 		ButtonPress:  make(chan elevio.ButtonEvent),
 		FloorReached: make(chan int),
+		ToggleLights: make(chan elevio.PanelLight),
 	}
 
 	networkChannels := logmanagement.NetworkChannels{
