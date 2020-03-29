@@ -56,7 +56,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 			if currentOrder != NoOrder {
 				//destination = orderhandler.GetDestination(currentOrder)
 				// currentOrder.Status = 1 // Tror denne linjen er kilden til kommunikasjonsproblemet vårt
-				ElevList := orderhandler.GetElevList() // ElevList er public så trenger egt ikke denne?
+				ElevList := logmanagement.GetElevList() // ElevList er public så trenger egt ikke denne?
 				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, currentOrder.Floor, ElevList) {
 					currentOrder.Status = 1
 					orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)

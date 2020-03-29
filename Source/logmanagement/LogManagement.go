@@ -80,12 +80,20 @@ func GetOrderList() [numFloors][numButtons]Order{
 	return MyElevInfo.Orders
 }
 
+func GetElevList() []Elev {
+	return OtherElevInfo
+}
+
 func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 	return elev.Id, elev.Floor, elev.CurrentOrder, elev.State
 }
 
-func GetMatrixDimensions() (rows, cols int) {
-	return numFloors, numButtons
+func GetNumFloors() int {
+	return numFloors
+}
+
+func GetNumButtons() int {
+	return numButtons
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

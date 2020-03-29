@@ -1,27 +1,22 @@
 package orderhandler
 
 import (
-	//"fmt"
 	"math"
 	"time"
-
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
 )
 
 
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Advanced Getters
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// GetDestination returns the floor the elevator should go to
-/*func GetDestination(order logmanagement.Order) int { // Delete
-	if order.Status == 0 { // != -1 ? Doesnt matter?
-		return order.Floor
-	}
-	return -1
-}*/
-
+/*Returns a pending order if one exsist, Othervise returns a false order*/
 func GetPendingOrder() logmanagement.Order {
-	numFloors, numButtons := logmanagement.GetMatrixDimensions()
+	numFloors := logmanagement.GetNumFloors()
+	numButtons := logmanagement.GetNumButtons()
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
 			if logmanagement.GetOrder(i,j).Status == 0 {
@@ -32,8 +27,7 @@ func GetPendingOrder() logmanagement.Order {
 	return logmanagement.Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
 }
 
-//Annet navn enn Get?
-// GetDirection returns which direction the elevator should move
+/* Returns which direction the elevator should move*/
 func GetDirection(currentfloor int, destination int) int {
 	if destination == -1 || destination == currentfloor {
 		return 0
@@ -44,7 +38,12 @@ func GetDirection(currentfloor int, destination int) int {
 	}
 }
 
-// ShouldElevatorStop determines if the elevator should stop when it reaches a floor
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// OrderHandling
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+/* Returns true if the elevator should stop when it reaches a floor*/
 func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.Elev, elevlist []logmanagement.Elev) bool {
 	dir := GetDirection(currentfloor, destination)
 	if dir == 0 {
@@ -64,6 +63,7 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 
 }
 
+/*Stops elevator and updates LocalOrders acording to floor in param*/
 func StopAtFloor(floor int) {
 	for i := 0; i < 3; i++ {
 		status := int(logmanagement.GetOrder(floor,i).Status)
@@ -79,6 +79,7 @@ func StopAtFloor(floor int) {
 	}
 }
 
+/*Trenger vi egt denne?*/
 func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 	for {
 		time.Sleep(20 * time.Millisecond)
@@ -96,6 +97,33 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent) {
 	}
 }
 
+/* Updates the Local Orders*/
+func UpdateLocalOrders(floor int, button int, active int, finished bool) { // Må kanskje endre til active OrderStatus
+	logmanagement.SetOrder(floor,button,logmanagement.OrderStatus(active), finished)
+	logmanagement.DisplayUpdates = true
+}
+
+/*Updates local lights acording to orders*/
+func UpdateLights(numFloors int, numButtons int) {
+	for {
+		time.Sleep(20 * time.Millisecond)
+		for i := 0; i < numFloors; i++ {
+			for j := 0; j < numButtons; j++ {
+				if logmanagement.GetOrder(i,j).Status == 2 {
+					elevio.SetButtonLamp(elevio.ButtonType(j), i, false)
+				} else {
+					elevio.SetButtonLamp(elevio.ButtonType(j), i, true)
+				}
+			}
+		}
+	}
+
+}
+
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Cost Function
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 //Returns true if I shuold take order
 func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, destination int, elevlist []logmanagement.Elev) bool {
@@ -114,7 +142,7 @@ func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, destin
 	return true
 }
 
-
+/*Retruns true if this elevator should take order during conflict*/
 func solveConflict(order logmanagement.Order, elev logmanagement.Elev, destination int, conflictElevs []logmanagement.Elev) bool {
 	id, floor, _, _ := logmanagement.GetElevInfo(elev)
 	myDist := math.Abs(float64(floor - destination))
@@ -127,31 +155,4 @@ func solveConflict(order logmanagement.Order, elev logmanagement.Elev, destinati
 		}
 	}
 	return true
-}
-
-//Getter
-func GetElevList() []logmanagement.Elev {
-	return logmanagement.OtherElevInfo
-}
-
-// UpdateOrderQueue updates the order queue
-func UpdateLocalOrders(floor int, button int, active int, finished bool) { // Må kanskje endre til active OrderStatus
-	logmanagement.SetOrder(floor,button,logmanagement.OrderStatus(active), finished)
-	logmanagement.DisplayUpdates = true
-}
-
-func UpdateLights(numFloors int, numButtons int) {
-	for {
-		time.Sleep(20 * time.Millisecond)
-		for i := 0; i < numFloors; i++ {
-			for j := 0; j < numButtons; j++ {
-				if logmanagement.MyElevInfo.Orders[i][j].Status == 2 {
-					elevio.SetButtonLamp(elevio.ButtonType(j), i, false)
-				} else {
-					elevio.SetButtonLamp(elevio.ButtonType(j), i, true)
-				}
-			}
-		}
-	}
-
 }
