@@ -33,7 +33,7 @@ func Initialize(numFloors int, id int, addr int) {
 }
 
 func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
-	fmt.Println("Hello")
+	fmt.Println("AutoHeis assemble")
 	//destination := -1
 	dir := 0
 	floor := 0
@@ -61,7 +61,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				ElevList := orderhandler.GetElevList() // ElevList er public så trenger egt ikke denne?
 				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, currentOrder.Floor, ElevList) {
 					currentOrder.Status = 1
-					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
+					orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					state = EXECUTE
 					logmanagement.UpdateElevInfo(floor, currentOrder, state)
