@@ -1,5 +1,7 @@
 package network
-
+//--------------------------------------------------------------------------------------
+/*This module conains the functions for sending and recieving messages on the nettwork*/
+//---------------------------------------------------------------------------------------
 import (
 	"encoding/json"
 	"fmt"
@@ -15,11 +17,11 @@ var port string
 var protocol string
 var serverIP string
 
-/**
- * @brief JSON decodes message from network and adds message to channel.
- * @param port; port to brodcast message on
- * @param chans; channels to send messages on
- */
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Nettwork functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*JSON decodes message from network and adds message to param channel.*/
 func RecieveMessage(port int, chans ...interface{}) {
 	checkArgs(chans...)
 
@@ -48,11 +50,7 @@ func RecieveMessage(port int, chans ...interface{}) {
 	}
 }
 
-/**
- * @brief JSON encides and brodcasts message from channel to the network.
- * @param port; port to brodcast message on
- * @param chans; channels to send messages on
- */
+/* JSON encodes and brodcasts message from param channel to the network on param port*/
 func BrodcastMessage(port int, chans ...interface{}) {
 
 	//fmt.Printf("typeName")
@@ -87,11 +85,30 @@ func BrodcastMessage(port int, chans ...interface{}) {
 
 }
 
-/**
- * @brief Checks that args to Tx'er/Rx'er are valid
- * @param chans; channels to be checked
- */
-func checkArgs(chans ...interface{}) {
+
+
+
+/*Sets up and returns connection*/
+func dialBroadcastUDP(port int) net.PacketConn {
+	s, _ := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
+	syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
+	syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_BROADCAST, 1)
+	syscall.Bind(s, &syscall.SockaddrInet4{Port: port})
+
+	f := os.NewFile(uintptr(s), "")
+	conn, _ := net.FilePacketConn(f)
+	f.Close()
+
+	return conn
+}
+
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Support Functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*Checks that args to Tx'er/Rx'er are valid on param channels*/
+ func checkArgs(chans ...interface{}) {
 	n := 0
 	for range chans {
 		n++
@@ -132,17 +149,4 @@ func checkArgs(chans ...interface{}) {
 			}
 		}
 	}
-}
-
-func dialBroadcastUDP(port int) net.PacketConn {
-	s, _ := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
-	syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
-	syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_BROADCAST, 1)
-	syscall.Bind(s, &syscall.SockaddrInet4{Port: port})
-
-	f := os.NewFile(uintptr(s), "")
-	conn, _ := net.FilePacketConn(f)
-	f.Close()
-
-	return conn
 }

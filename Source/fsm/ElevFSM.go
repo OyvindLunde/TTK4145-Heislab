@@ -1,5 +1,9 @@
 package fsm
 
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// This Module contain functions for executing this elevators orders
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 import (
 	"fmt"
 	"time"
@@ -10,8 +14,11 @@ import (
 	"../orderhandler"
 )
 
-type State int
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Structs and enums
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
+type State int
 const (
 	INIT    = 0
 	IDLE    = 1
@@ -25,11 +32,17 @@ type FsmChannels struct {
 	FloorReached chan int
 }
 
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Init and FSM
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 func Initialize(numFloors int, id int, addr int) {
 	elevcontroller.InitializeElevator(numFloors, addr)
 	elevio.SetFloorIndicator(0)
 }
 
+/*Elevator FSM*/
 func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	fmt.Println("AutoHeis assemble")
 	//destination := -1
@@ -47,15 +60,10 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 
 	for {
 		time.Sleep(20 * time.Millisecond)
-		/*if len(logmanagement.OtherElevInfo) > 0 {
-			logmanagement.PrintOrderQueue(logmanagement.OtherElevInfo[0].Orders)
-		}*/
 		switch state {
 		case IDLE:
 			currentOrder = orderhandler.GetPendingOrder()
 			if currentOrder != NoOrder {
-				//destination = orderhandler.GetDestination(currentOrder)
-				// currentOrder.Status = 1 // Tror denne linjen er kilden til kommunikasjonsproblemet vårt
 				ElevList := logmanagement.GetElevList() // ElevList er public så trenger egt ikke denne?
 				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, currentOrder.Floor, ElevList) {
 					currentOrder.Status = 1
