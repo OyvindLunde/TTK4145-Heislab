@@ -84,6 +84,47 @@ func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 	return elev.Id, elev.Floor, elev.CurrentOrder, elev.State
 }
 
+func GetMatrixDimensions() (rows, cols int) {
+	return numFloors, numButtons
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Init functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*Initializes LogManagement*/
+func InitLogManagement(id int, numFloors int, numButtons int){
+	numButtons = numButtons
+	numFloors = numFloors
+	InitializeMyElevInfo(id)
+}
+
+/*Initialises MyElevInfo variable*/
+func InitializeMyElevInfo(id int) {
+	MyElevInfo.Id = id
+	MyElevInfo.Floor = 0
+	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
+	MyElevInfo.State = 0
+	for i := 0; i < numFloors; i++ {
+		for j := 0; j < numButtons; j++ {
+			MyElevInfo.Orders[i][j].Floor = i
+			MyElevInfo.Orders[i][j].ButtonType = j
+			MyElevInfo.Orders[i][j].Status = 2
+			MyElevInfo.Orders[i][j].Finished = false
+		}
+	}
+	fmt.Println("MyElev initialized")
+}
+
+/*Inits network communication*/
+func InitCommunication(port int, channels NetworkChannels) {
+	go network.RecieveMessage(port, channels.RcvChannel)
+	go network.BrodcastMessage(port, channels.BcastChannel)
+	go SendMyElevInfo(channels.BcastChannel)
+	go UpdateOtherElevListFromNetwork(channels.RcvChannel)
+	fmt.Printf("Network initialized\n")
+}
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Logic functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -108,21 +149,15 @@ func UpdateOtherElevListFromNetwork(RcvChannel chan Elev) {
 				fmt.Println("Receiving:")
 				PrintOrderQueue(a.Orders)
 				updateOtherElevInfo(a)
-				updateQueueFromNetwork(a)
+				updateOrderList(a)
 			}
 		}
 	}
 }
 
-/*Inits network communication*/
-func InitCommunication(port int, channels NetworkChannels) {
-	go network.RecieveMessage(port, channels.RcvChannel)
-	go network.BrodcastMessage(port, channels.BcastChannel)
-	go SendMyElevInfo(channels.BcastChannel)
-	go UpdateOtherElevListFromNetwork(channels.RcvChannel)
-	fmt.Printf("Network initialized\n")
-}
 
+
+/*Updates otherelevinfo with info about elev in param*/
 func updateOtherElevInfo(msg Elev) {
 	for _, i := range OtherElevInfo {
 		if msg.Id == i.Id {
@@ -138,7 +173,9 @@ func updateOtherElevInfo(msg Elev) {
 
 }
 
-func updateQueueFromNetwork(msg Elev) {
+
+/*Updates orderlist with data stored in elev-param*/
+func updateOrderList(msg Elev) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
 			if msg.Orders[i][j].Finished == true {
@@ -151,27 +188,11 @@ func updateQueueFromNetwork(msg Elev) {
 	//DisplayUpdates = true
 }
 
-func GetMatrixDimensions() (rows, cols int) {
-	return numFloors, numButtons
-}
 
-func InitializeElevInfo(id int) {
-	MyElevInfo.Id = id
-	MyElevInfo.Floor = 0
-	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
-	MyElevInfo.State = 0
-	for i := 0; i < numFloors; i++ {
-		for j := 0; j < numButtons; j++ {
-			MyElevInfo.Orders[i][j].Floor = i
-			MyElevInfo.Orders[i][j].ButtonType = j
-			MyElevInfo.Orders[i][j].Status = 2
-			MyElevInfo.Orders[i][j].Finished = false
-		}
-	}
-	fmt.Println("MyElev initialized")
-}
 
-func UpdateElevInfo(floor int, order Order, state int) {
+
+/*Updates MyElevInfo variable from params*/
+func UpdateMyElevInfo(floor int, order Order, state int) {
 	MyElevInfo.Floor = floor
 	MyElevInfo.CurrentOrder = order
 	MyElevInfo.State = state

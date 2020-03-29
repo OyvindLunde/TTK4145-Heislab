@@ -28,8 +28,6 @@ type FsmChannels struct {
 func Initialize(numFloors int, id int, addr int) {
 	elevcontroller.InitializeElevator(numFloors, addr)
 	elevio.SetFloorIndicator(0)
-	//logmanagement.InitializeElevInfo()
-	orderhandler.InitOrderHandler(id)
 }
 
 func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
@@ -45,7 +43,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go orderhandler.HandleButtonEvents(channels.ButtonPress)
 	go orderhandler.UpdateLights(numFloors, numButtons)
-	//go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state) // Vurdere å droppe denne? Kjører unødvendig ofte
+	//go logmanagement.UpdateMyElevInfo(&floor, &currentOrder, &state) // Vurdere å droppe denne? Kjører unødvendig ofte
 
 	for {
 		time.Sleep(20 * time.Millisecond)
@@ -64,7 +62,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 					orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					state = EXECUTE
-					logmanagement.UpdateElevInfo(floor, currentOrder, state)
+					logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
 				}
 			}
 
@@ -73,7 +71,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 			select {
 			case a := <-channels.FloorReached:
 				floor = a
-				logmanagement.UpdateElevInfo(floor, currentOrder, state)
+				logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
 				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.MyElevInfo, logmanagement.OtherElevInfo) {
 					orderhandler.StopAtFloor(floor)
@@ -82,7 +80,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 					if dir == 0 { // Forslag: Legge inn en CheckForCABOrders funksjon, må i så fall inn i default også
 						//destination = -1 // Unødvendig?
 						state = IDLE
-						logmanagement.UpdateElevInfo(floor, NoOrder, state)
+						logmanagement.UpdateMyElevInfo(floor, NoOrder, state)
 					}
 				}
 
@@ -90,7 +88,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				if dir == 0 {
 					orderhandler.StopAtFloor(floor)
 					state = IDLE
-					logmanagement.UpdateElevInfo(floor, NoOrder, state)
+					logmanagement.UpdateMyElevInfo(floor, NoOrder, state)
 				}
 			}
 
