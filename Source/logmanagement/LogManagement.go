@@ -69,25 +69,28 @@ type NetworkChannels struct {
 //var RcvChannel chan Log
 //var bcastChannel chan Log
 
-var OrderQueue = [numFloors][numButtons]Order{}
 
 var DisplayUpdates = false // Used to display the system
 
-func InitializeQueue() {
+/*func InitializeQueue(elev Elev) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
-			OrderQueue[i][j].Floor = i
-			OrderQueue[i][j].ButtonType = j
-			OrderQueue[i][j].Status = 2
-			OrderQueue[i][j].Finished = false
+			elev.orders[i][j].Floor = i
+			elev.orders[i][j].ButtonType = j
+			elev.orders[i][j].Status = 2
+			elev.orders[i][j].Finished = false
 		}
 	}
-	fmt.Println("OrderQueue initialized")
-	//fmt.Println(OrderStatus(ACTIVE))
-}
+	fmt.Println("Orders initialized")
+}*/
 
 func GetOrder(floor int, buttonType int) Order {
-	return OrderQueue[floor][buttonType]
+	return MyElevInfo.Orders[floor][buttonType]
+}
+
+func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
+	 MyElevInfo.Orders[floor][buttonType].Status = status
+	 MyElevInfo.Orders[floor][buttonType].Finished = finished
 }
 
 func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
@@ -102,7 +105,7 @@ func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		//fmt.Println("Sending:")
-		//PrintOrderQueue(OrderQueue)
+		//PrintOrderQueue(MyElevInfo.orders)
 		BcastChannel <- MyElevInfo
 	}
 }
@@ -117,8 +120,8 @@ func UpdateLogFromNetwork(RcvChannel chan Elev) {
 		case a := <-RcvChannel:
 			//fmt.Printf("Received: %#v\n", a.Elev.Id)
 			if a.Id != MyElevInfo.Id {
-				//fmt.Println("Receiving:")
-				//PrintOrderQueue(a.Orders)
+				fmt.Println("Receiving:")
+				PrintOrderQueue(a.Orders)
 				updateElevatorList(a)
 				updateQueueFromNetwork(a)
 			}
@@ -167,9 +170,9 @@ func updateQueueFromNetwork(msg Elev) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
 			if msg.Orders[i][j].Finished == true {
-				OrderQueue[i][j].Status = 2
+				MyElevInfo.Orders[i][j].Status = 2
 			} else if msg.Orders[i][j].Status != 2 {
-				OrderQueue[i][j].Status = msg.Orders[i][j].Status
+				MyElevInfo.Orders[i][j].Status = msg.Orders[i][j].Status
 			}
 		}
 	}
@@ -185,7 +188,15 @@ func InitializeElevInfo(id int) {
 	MyElevInfo.Floor = 0
 	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
 	MyElevInfo.State = 0
-	MyElevInfo.Orders = OrderQueue
+	for i := 0; i < numFloors; i++ {
+		for j := 0; j < numButtons; j++ {
+			MyElevInfo.Orders[i][j].Floor = i
+			MyElevInfo.Orders[i][j].ButtonType = j
+			MyElevInfo.Orders[i][j].Status = 2
+			MyElevInfo.Orders[i][j].Finished = false
+		}
+	}
+	fmt.Println("MyElev initialized")
 }
 
 /*func UpdateElevInfo(floor *int, order *Order, state *int) {
@@ -204,6 +215,5 @@ func UpdateElevInfo(floor int, order Order, state int) {
 	MyElevInfo.Floor = floor
 	MyElevInfo.CurrentOrder = order
 	MyElevInfo.State = state
-	MyElevInfo.Orders = OrderQueue
 	DisplayUpdates = true
 }
