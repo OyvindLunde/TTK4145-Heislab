@@ -18,20 +18,6 @@ import (
 // Advanced Getters
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-/*Returns a pending order if one exsist, Othervise returns a false order*/
-func GetPendingOrder() logmanagement.Order {
-	numFloors := logmanagement.GetNumFloors()
-	numButtons := logmanagement.GetNumButtons()
-	for i := 0; i < numFloors; i++ {
-		for j := 0; j < numButtons; j++ {
-			if logmanagement.GetOrder(i, j).Status == 0 {
-				return logmanagement.GetOrder(i, j)
-			}
-		}
-	}
-	return logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
-}
-
 /* Returns which direction the elevator should move*/
 func GetDirection(currentfloor int, destination int) int {
 	if destination == -1 || destination == currentfloor {
@@ -86,7 +72,7 @@ func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
 }
 
 /*Trenger vi egt denne?*/
-func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<- elevio.PanelLight) {
+func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
@@ -97,6 +83,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false)
 				light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
 				lightsChannel <- light
+				newOrderChannel <- order
 				//elevio.SetButtonLamp(a.Button, a.Floor, true)
 				logmanagement.SetDisplayUpdates(true)
 			}
@@ -126,26 +113,12 @@ func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
 // Cost Function
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-//Returns true if I shuold take order
-func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, elevlist []logmanagement.Elev) bool {
-	if order.Floor == -1 {
-		return false
-	}
-
-	if int(order.ButtonType) == 2 {
+//Returns true if I order is valid
+func IsOrderValid(currentOrder logmanagement.Order) bool {
+	if logmanagement.GetOrder(currentOrder.Floor, int(currentOrder.ButtonType)).Status == 0 {
 		return true
 	}
-
-	conflictElevs := []logmanagement.Elev{}
-	for _, elev := range elevlist {
-		if elev.State == 0 {
-			conflictElevs = append(conflictElevs, elev)
-		}
-	}
-	if len(conflictElevs) != 0 {
-		return solveConflict(order, elev, conflictElevs)
-	}
-	return true
+	return false
 }
 
 /*Retruns true if this elevator should take order during conflict*/

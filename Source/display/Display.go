@@ -63,7 +63,7 @@ func Display() {
 		orderExpl := drawOrderExplanation(s)
 		arrow := drawArrowLeft(s, 30, 20, black, lightGray) // Arrow to use as floor indicator
 
-		go update(w, &logmanagement.GetDisplayUpdates())
+		go update(w)
 
 		var sz size.Event
 		for {
@@ -77,7 +77,7 @@ func Display() {
 				displayOrderExplanations(w, orderExpl)
 				//fmt.Println(&logmanagement.ElevInfo)
 				displayLocalElevator(w, s, elevStatic, logmanagement.GetOrderList(), logmanagement.GetMyElevInfo(), arrow)
-				displayOtherElevators(w, s, elevStatic, logmanagement.GetElevList(), arrow)
+				displayOtherElevators(w, s, elevStatic, logmanagement.GetOtherElevInfo(), arrow)
 
 			case size.Event: // Do not remove this
 				sz = e
@@ -89,12 +89,12 @@ func Display() {
 	})
 }
 
-func update(w screen.EventDeque, Updates *bool) {
+func update(w screen.EventDeque) {
 	for {
 		time.Sleep(20 * time.Millisecond)
-		if *Updates {
+		if logmanagement.GetDisplayUpdates() {
 			w.Send(paint.Event{})
-			*Updates = false
+			logmanagement.SetDisplayUpdates(false)
 		}
 	}
 

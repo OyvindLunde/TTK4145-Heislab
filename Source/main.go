@@ -28,6 +28,7 @@ func main() {
 		ButtonPress:  make(chan elevio.ButtonEvent),
 		FloorReached: make(chan int),
 		ToggleLights: make(chan elevio.PanelLight),
+		NewOrder:     make(chan logmanagement.Order),
 	}
 
 	networkChannels := logmanagement.NetworkChannels{
@@ -38,7 +39,7 @@ func main() {
 	fsm.Initialize(numFloors, id, addr)
 	logmanagement.InitLogManagement(id, numFloors, numButtons)
 	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
-	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights)
+	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder)
 
 	go display.Display()
 
