@@ -16,6 +16,7 @@ import (
 const numFloors = 4
 const numButtons = 3
 
+const timerLength = 20;
 var myElevInfo Elev
 var otherElevInfo []Elev
 
@@ -72,21 +73,9 @@ func GetOrder(floor int, buttonType int) Order {
 	return myElevInfo.Orders[floor][buttonType]
 }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-func SetOrder(floor int, buttonType int, status int, finished bool) {
-	MyElevInfo.Orders[floor][buttonType].Status = status
-	MyElevInfo.Orders[floor][buttonType].Finished = finished
-=======
 func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
 	myElevInfo.Orders[floor][buttonType].Status = status
 	myElevInfo.Orders[floor][buttonType].Finished = finished
->>>>>>> Stashed changes
-=======
-func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
-	myElevInfo.Orders[floor][buttonType].Status = status
-	myElevInfo.Orders[floor][buttonType].Finished = finished
->>>>>>> Stashed changes
 }
 
 func GetOrderList() [numFloors][numButtons]Order {
@@ -141,23 +130,10 @@ func InitializeMyElevInfo(id int) {
 	MyElevInfo.State = 0
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-			MyElevInfo.Orders[i][j].Floor = i
-			MyElevInfo.Orders[i][j].ButtonType = j
-			MyElevInfo.Orders[i][j].Status = -1
-			MyElevInfo.Orders[i][j].Finished = false
-=======
-=======
->>>>>>> Stashed changes
 			myElevInfo.Orders[i][j].Floor = i
 			myElevInfo.Orders[i][j].ButtonType = j
 			myElevInfo.Orders[i][j].Status = 2
 			myElevInfo.Orders[i][j].Finished = false
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 		}
 	}
 	fmt.Println("MyElev initialized")
@@ -172,10 +148,10 @@ func InitCommunication(port int, channels NetworkChannels, toggleLights chan ele
 	fmt.Printf("Network initialized\n")
 }
 
-func StartOrResetOrderTimer(elevId int){
+func StartTicker(){
 	for i :=0 ; i < len(orderTimer); i++{
 		if i.id == elevId{
-			orderTimer[i] := time.NewTimer(20 * time.Second)
+			orderTimer[i] := time.NewTimer(timerLength * time.Second)
 		}
 	}
 }
@@ -193,7 +169,7 @@ func SendMyElevInfo(BcastChannel chan Elev) {
 }
 
 /*Updates OtherElevLsit from channel in parameter*/
-func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight) { // Rename to UpdateFromNetwork
+func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
@@ -234,36 +210,20 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 		for j := 0; j < numButtons-1; j++ {
 			if msg.Orders[i][j].Finished == true && MyElevInfo.Orders[i][j].Status != -1 {
 				fmt.Println("case 1")
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-				MyElevInfo.Orders[i][j].Status = -1
-				// Replace with finished chan (?)
-=======
-=======
->>>>>>> Stashed changes
 				myElevInfo.Orders[i][j].Status = 2 
 				// Replace with finished chan
->>>>>>> Stashed changes
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
-				lightsChannel <- light
+				lightsChannel <-light
 			} else if msg.Orders[i][j].Status == 0 && MyElevInfo.Orders[i][j].Status == -1 {
 				fmt.Println("case 2")
 				myElevInfo.Orders[i][j].Status = 0
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
-				lightsChannel <- light
-			} else if msg.Orders[i][j].Status == msg.Id && MyElevInfo.Orders[i][j].Status <= 0 && msg.Orders[i][j].Finished == false {
+				lightsChannel <-light
+			} else if msg.Orders[i][j].Status == 1 && MyElevInfo.Orders[i][j].Status == 0 && msg.Orders[i][j].Finished == false {
 				fmt.Println("case 3")
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-				MyElevInfo.Orders[i][j].Status = msg.Id
-=======
 				myElevInfo.Orders[i][j].Status = 1
->>>>>>> Stashed changes
-=======
-				myElevInfo.Orders[i][j].Status = 1
->>>>>>> Stashed changes
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
-				lightsChannel <- light
+				lightsChannel <-light
 			}
 		}
 	}
