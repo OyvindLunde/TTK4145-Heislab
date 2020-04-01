@@ -68,6 +68,11 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				if orderhandler.IsOrderValid(currentOrder) {
 					currentOrder.Status = logmanagement.GetMyElevInfo().Id // Remove this?
 					logmanagement.SetMyElevInfo(floor, currentOrder, state)
+
+					if orderhandler.DetectConflict(currentOrder) {
+
+					}
+
 					orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.GetMyElevInfo().Id, false)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					state = EXECUTE

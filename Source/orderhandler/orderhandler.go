@@ -1,7 +1,7 @@
 package orderhandler
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-// This Module contain functions for handeling local orders
+// This Module contain functions for handling local orders
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
@@ -101,7 +101,6 @@ func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
 		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-lightschannel:
-			//fmt.Println(a)
 			elevio.SetButtonLamp(a.Button, a.Floor, a.Value)
 		}
 	}
@@ -115,6 +114,37 @@ func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
 func IsOrderValid(currentOrder logmanagement.Order) bool {
 	if logmanagement.GetOrder(currentOrder.Floor, int(currentOrder.ButtonType)).Status == 0 {
 		return true
+	}
+	return false
+}
+
+func DetectConflict(myCurrentOrder logmanagement.Order) bool {
+	if myCurrentOrder.ButtonType == 2 { // Check if Cab Order
+		return true
+	}
+
+	conflictElevs := make([]logmanagement.Elev, 0)
+
+	for i < time {
+		for _, otherElev := range logmanagement.GetOtherElevInfo() {
+			if myCurrentOrder.Floor == otherElev.CurrentOrder.Floor && myCurrentOrder.ButtonType == otherElev.CurrentOrder.ButtonType {
+				if !isElevInList(conflictElevs, otherElev.Id) {
+					conflictElevs = append(conflictElevs, otherElev)
+				}
+			}
+		}
+	}
+
+	if len(conflictElevs) > 0 {
+		return solveConflict()
+	}
+}
+
+func isElevInList(list []logmanagement.Elev, id int) bool {
+	for _, elev := range list {
+		if elev.Id == id {
+			return true
+		}
 	}
 	return false
 }
