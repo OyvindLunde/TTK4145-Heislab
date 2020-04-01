@@ -79,7 +79,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				floor = a
 				logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
-				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.MyElevInfo, logmanagement.OtherElevInfo) {
+				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.GetMyElevInfo(), logmanagement.GetElevatorList()) {
 					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))

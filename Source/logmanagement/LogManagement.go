@@ -16,11 +16,11 @@ import (
 const numFloors = 4
 const numButtons = 3
 
-var MyElevInfo Elev
-var OtherElevInfo []Elev
+var myElevInfo Elev
+var otherElevInfo []Elev
 
-var DisplayUpdates = false // Used to display the system
-
+var displayUpdates = false // Used to display the system
+var orderTimer []ElevTimer
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Declaration of structs and Enums
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -60,24 +60,35 @@ type NetworkChannels struct {
 	BcastChannel chan Elev
 }
 
+type ElevTimer struct {
+	id int
+	timer timer
+}
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Setters and Getters
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 func GetOrder(floor int, buttonType int) Order {
-	return MyElevInfo.Orders[floor][buttonType]
+	return myElevInfo.Orders[floor][buttonType]
 }
 
+<<<<<<< Updated upstream
 func SetOrder(floor int, buttonType int, status int, finished bool) {
 	MyElevInfo.Orders[floor][buttonType].Status = status
 	MyElevInfo.Orders[floor][buttonType].Finished = finished
+=======
+func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
+	myElevInfo.Orders[floor][buttonType].Status = status
+	myElevInfo.Orders[floor][buttonType].Finished = finished
+>>>>>>> Stashed changes
 }
 
 func GetOrderList() [numFloors][numButtons]Order {
-	return MyElevInfo.Orders
+	return myElevInfo.Orders
 }
 
 func GetElevList() []Elev {
-	return OtherElevInfo
+	return otherElevInfo
 }
 
 func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
@@ -90,6 +101,19 @@ func GetNumFloors() int {
 
 func GetNumButtons() int {
 	return numButtons
+}
+
+
+func GetMyElevInfo() Elev {
+	return myElevInfo
+}
+
+func GetDisplayUpdates() bool {
+	return displayUpdates
+}
+
+func SetDisplayUpdates(value bool) {
+	displayUpdates = value
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -111,10 +135,17 @@ func InitializeMyElevInfo(id int) {
 	MyElevInfo.State = 0
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
+<<<<<<< Updated upstream
 			MyElevInfo.Orders[i][j].Floor = i
 			MyElevInfo.Orders[i][j].ButtonType = j
 			MyElevInfo.Orders[i][j].Status = -1
 			MyElevInfo.Orders[i][j].Finished = false
+=======
+			myElevInfo.Orders[i][j].Floor = i
+			myElevInfo.Orders[i][j].ButtonType = j
+			myElevInfo.Orders[i][j].Status = 2
+			myElevInfo.Orders[i][j].Finished = false
+>>>>>>> Stashed changes
 		}
 	}
 	fmt.Println("MyElev initialized")
@@ -127,6 +158,14 @@ func InitCommunication(port int, channels NetworkChannels, toggleLights chan ele
 	go SendMyElevInfo(channels.BcastChannel)
 	go UpdateFromNetwork(channels.RcvChannel, toggleLights)
 	fmt.Printf("Network initialized\n")
+}
+
+func StartOrResetOrderTimer(elevId int){
+	for i :=0 ; i < len(orderTimer); i++{
+		if i.id == elevId{
+			orderTimer[i] := time.NewTimer(20 * time.Second)
+		}
+	}
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -162,18 +201,18 @@ func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLi
 func updateOtherElevInfo(msg Elev) {
 	for i := 0; i < len(OtherElevInfo); i++ {
 		if msg.Id == OtherElevInfo[i].Id {
-			OtherElevInfo[i].Floor = msg.Floor
-			OtherElevInfo[i].CurrentOrder = msg.CurrentOrder
-			OtherElevInfo[i].State = msg.State
-			OtherElevInfo[i].Orders = msg.Orders
+			otherElevInfo[i].Floor = msg.Floor
+			otherElevInfo[i].CurrentOrder = msg.CurrentOrder
+			otherElevInfo[i].State = msg.State
+			otherElevInfo[i].Orders = msg.Orders
 			/*fmt.Println("Other elevs orders:")
 			PrintOrderQueue(OtherElevInfo[0].Orders)
 			fmt.Println("__________")*/
 			return
 		}
 	}
-	OtherElevInfo = append(OtherElevInfo, msg)
-	DisplayUpdates = true
+	otherElevInfo = append(OtherElevInfo, msg)
+	displayUpdates = true
 
 }
 
@@ -183,18 +222,27 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 		for j := 0; j < numButtons-1; j++ {
 			if msg.Orders[i][j].Finished == true && MyElevInfo.Orders[i][j].Status != -1 {
 				fmt.Println("case 1")
+<<<<<<< Updated upstream
 				MyElevInfo.Orders[i][j].Status = -1
 				// Replace with finished chan (?)
+=======
+				myElevInfo.Orders[i][j].Status = 2 
+				// Replace with finished chan
+>>>>>>> Stashed changes
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
 				lightsChannel <- light
 			} else if msg.Orders[i][j].Status == 0 && MyElevInfo.Orders[i][j].Status == -1 {
 				fmt.Println("case 2")
-				MyElevInfo.Orders[i][j].Status = 0
+				myElevInfo.Orders[i][j].Status = 0
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
 			} else if msg.Orders[i][j].Status == msg.Id && MyElevInfo.Orders[i][j].Status <= 0 && msg.Orders[i][j].Finished == false {
 				fmt.Println("case 3")
+<<<<<<< Updated upstream
 				MyElevInfo.Orders[i][j].Status = msg.Id
+=======
+				myElevInfo.Orders[i][j].Status = 1
+>>>>>>> Stashed changes
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
 			}
@@ -205,10 +253,10 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 
 /*Updates MyElevInfo variable from params*/
 func UpdateMyElevInfo(floor int, order Order, state int) {
-	MyElevInfo.Floor = floor
-	MyElevInfo.CurrentOrder = order
-	MyElevInfo.State = state
-	DisplayUpdates = true
+	myElevInfo.Floor = floor
+	myElevInfo.CurrentOrder = order
+	myElevInfo.State = state
+	displayUpdates = true
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

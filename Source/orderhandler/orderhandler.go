@@ -98,7 +98,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 				light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
 				lightsChannel <- light
 				//elevio.SetButtonLamp(a.Button, a.Floor, true)
-				logmanagement.DisplayUpdates = true
+				logmanagement.SetDisplayUpdates(true)
 			}
 		}
 	}
@@ -107,7 +107,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 /* Updates the Local Orders*/
 func UpdateLocalOrders(floor int, button int, active int, finished bool) {
 	logmanagement.SetOrder(floor, button, active, finished)
-	logmanagement.DisplayUpdates = true
+	logmanagement.SetDisplayUpdates(true)
 }
 
 /*Updates local lights acording to orders*/

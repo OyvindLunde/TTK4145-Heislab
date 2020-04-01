@@ -63,7 +63,7 @@ func Display() {
 		orderExpl := drawOrderExplanation(s)
 		arrow := drawArrowLeft(s, 30, 20, black, lightGray) // Arrow to use as floor indicator
 
-		go update(w, &logmanagement.DisplayUpdates)
+		go update(w, &logmanagement.GetDisplayUpdates())
 
 		var sz size.Event
 		for {
@@ -76,8 +76,8 @@ func Display() {
 				paintScreen(w, sz, lightGray, blue0) // Paint background and border of screen in the selected colors
 				displayOrderExplanations(w, orderExpl)
 				//fmt.Println(&logmanagement.ElevInfo)
-				displayLocalElevator(w, s, elevStatic, logmanagement.GetOrderList(), logmanagement.MyElevInfo, arrow)
-				displayOtherElevators(w, s, elevStatic, logmanagement.OtherElevInfo, arrow)
+				displayLocalElevator(w, s, elevStatic, logmanagement.GetOrderList(), logmanagement.GetMyElevInfo(), arrow)
+				displayOtherElevators(w, s, elevStatic, logmanagement.GetElevList(), arrow)
 
 			case size.Event: // Do not remove this
 				sz = e
