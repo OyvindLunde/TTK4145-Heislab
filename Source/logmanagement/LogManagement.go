@@ -172,7 +172,8 @@ func StartTicker(){
 /*Sends MyElevInfo on channel in parameter*/
 func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
+		//fmt.Println(myElevInfo.CurrentOrder)
 		BcastChannel <- myElevInfo
 	}
 }
@@ -180,13 +181,13 @@ func SendMyElevInfo(BcastChannel chan Elev) {
 /*Updates OtherElevLsit from channel in parameter*/
 func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
 			if a.Id != myElevInfo.Id {
 				updateOtherElevInfo(a)
 				updateOrderList(a, lightsChannel, newOrderChannel)
-				fmt.Println(a.CurrentOrder)
+				//fmt.Println(a.CurrentOrder)
 			}
 		}
 	}

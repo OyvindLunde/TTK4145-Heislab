@@ -4,8 +4,16 @@
 - Timer: Watchdog, timeout osv
 - Kun ta en ordre når en annen heis har bekreftet den (kun bekrefte ting som kommer fra nettverket?)
 
-- Fikse costfunksjon og alt rundt den, channels?
 - Fikse State er laget to steder
-- Ordrestatus settes til id - bruk til å fikse lys av/på //Reppen
-- Ordrer går av og på ^ //Reppen
+- Ordrer går av og på ^ - må fikses
 - Splitt opp ShouldItakeOrder i to funksjoner, detect og solve
+
+- Alt av feilhåndtering
+
+
+Spør studass om:
+- Sleep time, særlig for network
+- Polletallet på simulator
+- main moduler og sånt
+- Evt heiser på forskjellige pcer (ikke så viktig)
+
