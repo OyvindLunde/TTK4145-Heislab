@@ -1,21 +1,32 @@
 package logmanagement
 
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// This Module contain functions for updating orders and statuses between elevators
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 import (
 	"fmt"
 	"strconv"
 	"time"
 
 	"../network"
+	"../elevio"
 )
 
 const numFloors = 4
 const numButtons = 3
 
-//var Id int
+var MyElevInfo Elev
+var OtherElevInfo []Elev
+
+var DisplayUpdates = false // Used to display the system
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Declaration of structs and Enums
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*State enum*/
 type State int // Kanskje slette denne? Eksisterer i FSM også
-
 const (
 	INIT    = 0
 	IDLE    = 1
@@ -33,6 +44,7 @@ type Order struct {
 	// Confirmed bool
 }
 
+/*OrderStatus Enum*/
 type OrderStatus int
 
 const (
@@ -52,80 +64,166 @@ type Elev struct {
 	Orders [numFloors][numButtons]Order
 }
 
-// LogList? Må kunne sende en reset heis cab orders
-
-/*Log to be sendt over the network*/
-
-/*Declaration of local log*/
-
-var MyElevInfo Elev
-var OtherElevInfo []Elev
-
 /*Broadcast and recieve channel*/
 type NetworkChannels struct {
 	RcvChannel   chan Elev
 	BcastChannel chan Elev
 }
 
-//var RcvChannel chan Log
-//var bcastChannel chan Log
-
-var OrderQueue = [numFloors][numButtons]Order{}
-
-var DisplayUpdates = false // Used to display the system
-
-func InitializeQueue() {
-	for i := 0; i < numFloors; i++ {
-		for j := 0; j < numButtons; j++ {
-			OrderQueue[i][j].Floor = i
-			OrderQueue[i][j].ButtonType = j
-			OrderQueue[i][j].Status = 2
-			OrderQueue[i][j].Finished = false
-		}
-	}
-	fmt.Println("OrderQueue initialized")
-	//fmt.Println(OrderStatus(ACTIVE))
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Setters and Getters
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+func GetOrder(floor int, buttonType int) Order {
+	return MyElevInfo.Orders[floor][buttonType]
 }
 
-func GetOrder(floor int, buttonType int) Order {
-	return OrderQueue[floor][buttonType]
+func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
+	MyElevInfo.Orders[floor][buttonType].Status = status
+	MyElevInfo.Orders[floor][buttonType].Finished = finished
+}
+
+func GetOrderList() [numFloors][numButtons]Order {
+	return MyElevInfo.Orders
+}
+
+func GetElevList() []Elev {
+	return OtherElevInfo
 }
 
 func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
 	return elev.Id, elev.Floor, elev.CurrentOrder, elev.State
 }
 
-/**
- * @brief puts message on bcastChannel
- * @param Message; message to be transmitted
- */
+func GetNumFloors() int {
+	return numFloors
+}
+
+func GetNumButtons() int {
+	return numButtons
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Init functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*Initializes LogManagement*/
+func InitLogManagement(id int, numFloors int, numButtons int) {
+	numButtons = numButtons
+	numFloors = numFloors
+	InitializeMyElevInfo(id)
+}
+
+/*Initialises MyElevInfo variable*/
+func InitializeMyElevInfo(id int) {
+	MyElevInfo.Id = id
+	MyElevInfo.Floor = 0
+	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
+	MyElevInfo.State = 0
+	for i := 0; i < numFloors; i++ {
+		for j := 0; j < numButtons; j++ {
+			MyElevInfo.Orders[i][j].Floor = i
+			MyElevInfo.Orders[i][j].ButtonType = j
+			MyElevInfo.Orders[i][j].Status = 2
+			MyElevInfo.Orders[i][j].Finished = false
+		}
+	}
+	fmt.Println("MyElev initialized")
+}
+
+/*Inits network communication*/
+func InitCommunication(port int, channels NetworkChannels, toggleLights chan elevio.PanelLight) {
+	go network.RecieveMessage(port, channels.RcvChannel)
+	go network.BrodcastMessage(port, channels.BcastChannel)
+	go SendMyElevInfo(channels.BcastChannel)
+	go UpdateOtherElevListFromNetwork(channels.RcvChannel, toggleLights)
+	fmt.Printf("Network initialized\n")
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Logic functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*Sends MyElevInfo on channel in parameter*/
 func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
 		time.Sleep(20 * time.Millisecond)
-		fmt.Println("Sending:")
-		PrintOrderQueue(OrderQueue)
 		BcastChannel <- MyElevInfo
 	}
 }
 
-/**
- * @brief reads message from RcvChannel and does hit width it
- */
-func UpdateLogFromNetwork(RcvChannel chan Elev) {
+/*Updates OtherElevLsit from channel in parameter*/
+func UpdateOtherElevListFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
-			//fmt.Printf("Received: %#v\n", a.Elev.Id)
 			if a.Id != MyElevInfo.Id {
-				//fmt.Println("Receiving:")
-				//PrintOrderQueue(a.Orders)
-				updateElevatorList(a)
-				updateQueueFromNetwork(a)
+				/*fmt.Println("Received:")
+				PrintOrderQueue(a.Orders)
+				fmt.Println("_____________")*/
+				updateOtherElevInfo(a)
+				updateOrderList(a, lightsChannel)
 			}
 		}
 	}
 }
+
+/*Updates otherelevinfo with info about elev in param*/
+func updateOtherElevInfo(msg Elev) {
+	for i := 0; i < len(OtherElevInfo); i++ {
+		if msg.Id == OtherElevInfo[i].Id {
+			OtherElevInfo[i].Floor = msg.Floor
+			OtherElevInfo[i].CurrentOrder = msg.CurrentOrder
+			OtherElevInfo[i].State = msg.State
+			OtherElevInfo[i].Orders = msg.Orders
+			/*fmt.Println("Other elevs orders:")
+			PrintOrderQueue(OtherElevInfo[0].Orders)
+			fmt.Println("__________")*/
+			return
+		}
+	}
+	OtherElevInfo = append(OtherElevInfo, msg)
+	DisplayUpdates = true
+
+}
+
+/*Updates orderlist with data stored in elev-param*/
+func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
+	for i := 0; i < numFloors; i++ {
+		for j := 0; j < numButtons-1; j++ {
+			if msg.Orders[i][j].Finished == true && MyElevInfo.Orders[i][j].Status != 2 {
+				fmt.Println("case 1")
+				MyElevInfo.Orders[i][j].Status = 2 
+				// Replace with finished chan
+				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
+				lightsChannel <-light
+			} else if msg.Orders[i][j].Status == 0 && MyElevInfo.Orders[i][j].Status == 2 {
+				fmt.Println("case 2")
+				MyElevInfo.Orders[i][j].Status = 0
+				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
+				lightsChannel <-light
+			} else if msg.Orders[i][j].Status == 1 && MyElevInfo.Orders[i][j].Status == 0 && msg.Orders[i][j].Finished == false {
+				fmt.Println("case 3")
+				MyElevInfo.Orders[i][j].Status = 1
+				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
+				lightsChannel <-light
+			}
+		}
+	}
+	//DisplayUpdates = true
+}
+
+/*Updates MyElevInfo variable from params*/
+func UpdateMyElevInfo(floor int, order Order, state int) {
+	MyElevInfo.Floor = floor
+	MyElevInfo.CurrentOrder = order
+	MyElevInfo.State = state
+	DisplayUpdates = true
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Dev functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 func PrintOrderQueue(queue [numFloors][numButtons]Order) {
 	fmt.Println("Orders:")
@@ -134,77 +232,4 @@ func PrintOrderQueue(queue [numFloors][numButtons]Order) {
 		fmt.Println(string)
 	}
 	fmt.Println("____________")
-}
-
-func Communication(port int, channels NetworkChannels) {
-	//RcvChannel := make(chan Log)
-	//bcastChannel := make(chan Log)
-
-	go network.RecieveMessage(port, channels.RcvChannel)
-	go network.BrodcastMessage(port, channels.BcastChannel)
-	go SendMyElevInfo(channels.BcastChannel)
-	go UpdateLogFromNetwork(channels.RcvChannel)
-	//fmt.Printf("Network initialized\n")
-}
-
-func updateElevatorList(msg Elev) {
-	//fmt.Println("In: ElevatorList")
-	//PrintOrderQueue(msg.Orders)
-	for _, i := range OtherElevInfo {
-		if msg.Id == i.Id {
-			//fmt.Println("Correct ID")
-			i.Floor = msg.Floor
-			i.CurrentOrder = msg.CurrentOrder
-			i.State = msg.State
-			i.Orders = msg.Orders
-			return
-		}
-	}
-	OtherElevInfo = append(OtherElevInfo, msg)
-
-}
-
-func updateQueueFromNetwork(msg Elev) {
-	for i := 0; i < numFloors; i++ {
-		for j := 0; j < numButtons-1; j++ {
-			if msg.Orders[i][j].Finished == true {
-				OrderQueue[i][j].Status = 2
-			} else if msg.Orders[i][j].Status != 2 {
-				OrderQueue[i][j].Status = msg.Orders[i][j].Status
-			}
-		}
-	}
-	//DisplayUpdates = true
-}
-
-func GetMatrixDimensions() (rows, cols int) {
-	return numFloors, numButtons
-}
-
-func InitializeElevInfo(id int) {
-	MyElevInfo.Id = id
-	MyElevInfo.Floor = 0
-	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
-	MyElevInfo.State = 0
-	MyElevInfo.Orders = OrderQueue
-}
-
-/*func UpdateElevInfo(floor *int, order *Order, state *int) {
-	for {
-		time.Sleep(5 * time.Millisecond)
-		ElevInfo.Floor = *floor
-		ElevInfo.CurrentOrder = *order
-		ElevInfo.State = *state
-		//fmt.Println(ElevInfo)
-
-	}
-
-}*/
-
-func UpdateElevInfo(floor int, order Order, state int) {
-	MyElevInfo.Floor = floor
-	MyElevInfo.CurrentOrder = order
-	MyElevInfo.State = state
-	MyElevInfo.Orders = OrderQueue
-	DisplayUpdates = true
 }

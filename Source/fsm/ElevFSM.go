@@ -1,5 +1,9 @@
 package fsm
 
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// This Module contain functions for executing this elevators orders
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 import (
 	"fmt"
 	"time"
@@ -10,8 +14,11 @@ import (
 	"../orderhandler"
 )
 
-type State int
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Structs and enums
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
+type State int
 const (
 	INIT    = 0
 	IDLE    = 1
@@ -23,17 +30,22 @@ const (
 type FsmChannels struct {
 	ButtonPress  chan elevio.ButtonEvent
 	FloorReached chan int
+	ToggleLights chan elevio.PanelLight
 }
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Init and FSM
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 func Initialize(numFloors int, id int, addr int) {
 	elevcontroller.InitializeElevator(numFloors, addr)
 	elevio.SetFloorIndicator(0)
-	//logmanagement.InitializeElevInfo()
-	orderhandler.InitOrderHandler(id)
 }
 
+/*Elevator FSM*/
 func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
-	fmt.Println("Hello")
+	fmt.Println("AutoHeis assemble")
 	//destination := -1
 	dir := 0
 	floor := 0
@@ -43,28 +55,23 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 
 	go elevio.PollButtons(channels.ButtonPress) // Kan vi legge denne inn i HandleButtonEvents?
 	go elevio.PollFloorSensor(channels.FloorReached)
-	go orderhandler.HandleButtonEvents(channels.ButtonPress)
-	go orderhandler.UpdateLights(numFloors, numButtons)
-	//go logmanagement.UpdateElevInfo(&floor, &currentOrder, &state) // Vurdere å droppe denne? Kjører unødvendig ofte
+	go orderhandler.HandleButtonEvents(channels.ButtonPress, channels.ToggleLights)
+	go orderhandler.UpdateLightsV2(channels.ToggleLights)
+	//go logmanagement.UpdateMyElevInfo(&floor, &currentOrder, &state) // Vurdere å droppe denne? Kjører unødvendig ofte
 
 	for {
 		time.Sleep(20 * time.Millisecond)
-		/*if len(logmanagement.OtherElevInfo) > 0 {
-			logmanagement.PrintOrderQueue(logmanagement.OtherElevInfo[0].Orders)
-		}*/
 		switch state {
 		case IDLE:
 			currentOrder = orderhandler.GetPendingOrder()
 			if currentOrder != NoOrder {
-				//destination = orderhandler.GetDestination(currentOrder)
-				// currentOrder.Status = 1 // Tror denne linjen er kilden til kommunikasjonsproblemet vårt
-				ElevList := orderhandler.GetElevList() // ElevList er public så trenger egt ikke denne?
+				ElevList := logmanagement.GetElevList() // ElevList er public så trenger egt ikke denne?
 				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, currentOrder.Floor, ElevList) {
 					currentOrder.Status = 1
-					orderhandler.UpdateOrderQueue(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
+					orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					state = EXECUTE
-					logmanagement.UpdateElevInfo(floor, currentOrder, state)
+					logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
 				}
 			}
 
@@ -73,24 +80,24 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 			select {
 			case a := <-channels.FloorReached:
 				floor = a
-				logmanagement.UpdateElevInfo(floor, currentOrder, state)
+				logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
 				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.MyElevInfo, logmanagement.OtherElevInfo) {
-					orderhandler.StopAtFloor(floor)
+					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
 					if dir == 0 { // Forslag: Legge inn en CheckForCABOrders funksjon, må i så fall inn i default også
 						//destination = -1 // Unødvendig?
 						state = IDLE
-						logmanagement.UpdateElevInfo(floor, NoOrder, state)
+						logmanagement.UpdateMyElevInfo(floor, NoOrder, state)
 					}
 				}
 
 			default:
 				if dir == 0 {
-					orderhandler.StopAtFloor(floor)
+					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					state = IDLE
-					logmanagement.UpdateElevInfo(floor, NoOrder, state)
+					logmanagement.UpdateMyElevInfo(floor, NoOrder, state)
 				}
 			}
 

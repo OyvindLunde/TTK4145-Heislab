@@ -76,7 +76,7 @@ func Display() {
 				paintScreen(w, sz, lightGray, blue0) // Paint background and border of screen in the selected colors
 				displayOrderExplanations(w, orderExpl)
 				//fmt.Println(&logmanagement.ElevInfo)
-				displayLocalElevator(w, s, elevStatic, logmanagement.OrderQueue, logmanagement.MyElevInfo, arrow)
+				displayLocalElevator(w, s, elevStatic, logmanagement.GetOrderList(), logmanagement.MyElevInfo, arrow)
 				displayOtherElevators(w, s, elevStatic, logmanagement.OtherElevInfo, arrow)
 
 			case size.Event: // Do not remove this
@@ -102,12 +102,14 @@ func update(w screen.EventDeque, Updates *bool) {
 
 func displayOtherElevators(w screen.Window, s screen.Screen, elevStatic []screen.Texture, elevList []logmanagement.Elev, arrow screen.Texture) {
 	for i := 0; i < len(elevList); i++ {
+		//logmanagement.PrintOrderQueue(elevList[i].Orders)
 		displayElevStatic(w, elevStatic, btnPanel_x0+300*(i+1))
 		elevatorTitle := drawText(s, "Elevator "+strconv.Itoa(elevList[i].Id)+" overview", 155, 20) // To improve runtime: change so that this is only calculated once
 		w.Copy(image.Point{btnPanel_x0 + 300*(i+1) + btn_size_x/2 - 25, btnPanel_y0 - 25}, elevatorTitle, elevatorTitle.Bounds(), screen.Src, nil)
 		displayElevInfo(w, drawElevInfo(s, elevList[i]), i+1)
 		displayFloorIndicator(w, arrow, elevList[i].Floor, i+1)
-		displayOrders(w, s, logmanagement.OtherElevInfo[i].Orders, btnPanel_x0+300*(i+1)) // Add this later
+		displayOrders(w, s, elevList[i].Orders, btnPanel_x0+300*(i+1))
+		//displayOrders(w, s, logmanagement.MyElevInfo.Orders, btnPanel_x0+300*(i+1))
 	}
 }
 
