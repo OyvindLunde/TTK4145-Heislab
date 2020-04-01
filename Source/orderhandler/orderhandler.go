@@ -94,6 +94,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 			//fmt.Println(a)
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == -1 {
+				fmt.Println(a)
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false)
 				light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
 				lightsChannel <- light

@@ -64,9 +64,9 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 		switch state {
 		case IDLE:
 			currentOrder = orderhandler.GetPendingOrder()
-			if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, logmanagement.GetElevList()) {
-				currentOrder.Status = logmanagement.MyElevInfo.Id // Remove this?
-				orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.MyElevInfo.Id, false)
+			if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.GetMyElevInfo(), logmanagement.GetElevList()) {
+				currentOrder.Status = logmanagement.GetMyElevInfo().Id // Remove this?
+				orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.GetMyElevInfo().Id, false)
 				dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 				state = EXECUTE
 				logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
@@ -79,7 +79,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				floor = a
 				logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
-				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.GetMyElevInfo(), logmanagement.GetElevatorList()) {
+				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.GetMyElevInfo(), logmanagement.GetElevList()) {
 					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
