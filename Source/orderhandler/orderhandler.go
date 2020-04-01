@@ -5,6 +5,7 @@ package orderhandler
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -118,35 +119,27 @@ func IsOrderValid(currentOrder logmanagement.Order) bool {
 	return false
 }
 
-func DetectConflict(myCurrentOrder logmanagement.Order) bool {
+func ShouldITakeOrder(myCurrentOrder logmanagement.Order) bool {
 	if myCurrentOrder.ButtonType == 2 { // Check if Cab Order
 		return true
 	}
 
+	time.Sleep(2000 * time.Millisecond)
+
 	conflictElevs := make([]logmanagement.Elev, 0)
 
-	for i < time {
-		for _, otherElev := range logmanagement.GetOtherElevInfo() {
-			if myCurrentOrder.Floor == otherElev.CurrentOrder.Floor && myCurrentOrder.ButtonType == otherElev.CurrentOrder.ButtonType {
-				if !isElevInList(conflictElevs, otherElev.Id) {
-					conflictElevs = append(conflictElevs, otherElev)
-				}
-			}
+	for _, otherElev := range logmanagement.GetOtherElevInfo() {
+		if myCurrentOrder.Floor == otherElev.CurrentOrder.Floor && myCurrentOrder.ButtonType == otherElev.CurrentOrder.ButtonType {
+			conflictElevs = append(conflictElevs, otherElev)
 		}
 	}
 
 	if len(conflictElevs) > 0 {
-		return solveConflict()
+		fmt.Println("Conflict")
+		return solveConflict(myCurrentOrder, logmanagement.GetMyElevInfo(), conflictElevs)
 	}
-}
 
-func isElevInList(list []logmanagement.Elev, id int) bool {
-	for _, elev := range list {
-		if elev.Id == id {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
 /*Retruns true if this elevator should take order during conflict*/

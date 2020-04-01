@@ -184,11 +184,9 @@ func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLi
 		select {
 		case a := <-RcvChannel:
 			if a.Id != myElevInfo.Id {
-				/*fmt.Println("Received:")
-				PrintOrderQueue(a.Orders)
-				fmt.Println("_____________")*/
 				updateOtherElevInfo(a)
 				updateOrderList(a, lightsChannel, newOrderChannel)
+				fmt.Println(a.CurrentOrder)
 			}
 		}
 	}
@@ -202,9 +200,6 @@ func updateOtherElevInfo(msg Elev) {
 			otherElevInfo[i].CurrentOrder = msg.CurrentOrder
 			otherElevInfo[i].State = msg.State
 			otherElevInfo[i].Orders = msg.Orders
-			/*fmt.Println("Other elevs orders:")
-			PrintOrderQueue(OtherElevInfo[0].Orders)
-			fmt.Println("__________")*/
 			return
 		}
 	}
@@ -218,19 +213,16 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderC
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
 			if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 { // Order finished by other elev
-				fmt.Println("case 1")
 				myElevInfo.Orders[i][j].Status = -1
 				// Replace with finished chan
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
 				lightsChannel <- light
 			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == -1 { // New order received
-				fmt.Println("case 2")
 				myElevInfo.Orders[i][j].Status = 0
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
 				newOrderChannel <- msg.Orders[i][j]
 			} else if msg.Orders[i][j].Status == msg.Id && myElevInfo.Orders[i][j].Status <= 0 && msg.Orders[i][j].Finished == false { // Other elev taken order
-				fmt.Println("case 3")
 				myElevInfo.Orders[i][j].Status = msg.Id
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light

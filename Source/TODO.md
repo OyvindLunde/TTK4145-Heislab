@@ -8,3 +8,4 @@
 - Fikse State er laget to steder
 - Ordrestatus settes til id - bruk til å fikse lys av/på //Reppen
 - Ordrer går av og på ^ //Reppen
+- Splitt opp ShouldItakeOrder i to funksjoner, detect og solve
