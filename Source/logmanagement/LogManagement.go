@@ -17,7 +17,7 @@ const numFloors = 4
 const numButtons = 3
 
 const timerLength = 5; //seconds
-const tickTreshold = 5; //number of tick needed to generate an interupt
+const tickTreshold = 2; //number of tick needed to generate an interupt
 var myElevInfo Elev
 var otherElevInfo []Elev
 
@@ -26,15 +26,6 @@ var displayUpdates = false // Used to display the system
 // Declaration of structs and Enums
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-/*State enum*/
-type State int // Kanskje slette denne? Eksisterer i FSM også
-const (
-	INIT    = 0
-	IDLE    = 1
-	EXECUTE = 2
-	LOST    = 3
-	RESET   = 4
-)
 
 type Order struct {
 	Floor      int
@@ -117,6 +108,7 @@ func InitLogManagement(id int, numFloors int, numButtons int) {
 	numButtons = numButtons
 	numFloors = numFloors
 	InitializeMyElevInfo(id)
+	startTicker()
 }
 
 /*Initialises MyElevInfo variable*/
@@ -146,17 +138,22 @@ func InitCommunication(port int, channels NetworkChannels, toggleLights chan ele
 	fmt.Printf("Network initialized\n")
 }
 
-func StartTicker(){
+func startTicker(){
 	ticker := time.NewTicker(timerLength * time.Second)
 	go func() {
         for {
             select {
-            case <-ticker.C:
+			case <-ticker.C:
+				fmt.Println("tick")
                 for i:= 0; i < len(otherElevInfo); i++{
 					if otherElevInfo[i].CurrentOrder.Status != -1 && otherElevInfo[i].CurrentOrder.Status != 0{
 						otherElevInfo[i].CurrentOrder.TimeTicks +=1
 						if otherElevInfo[i].CurrentOrder.TimeTicks >= tickTreshold{
 							fmt.Println("Timer interupt")
+							for j:= 0; j < len(otherElevInfo); j++{
+								otherElevInfo[j].Orders[otherElevInfo[i].CurrentOrder.Floor][otherElevInfo[i].CurrentOrder.ButtonType].Status = 0
+							}
+							otherElevInfo[i].CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 						}
 					}
 				}
@@ -220,18 +217,18 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
 			if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 {
-				fmt.Println("case 1")
+				//fmt.Println("case 1")
 				myElevInfo.Orders[i][j].Status = 2 
 				// Replace with finished chan
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
 				lightsChannel <-light
 			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == -1 {
-				fmt.Println("case 2")
+				//fmt.Println("case 2")
 				myElevInfo.Orders[i][j].Status = 0
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <-light
 			} else if msg.Orders[i][j].Status == 1 && myElevInfo.Orders[i][j].Status == 0 && msg.Orders[i][j].Finished == false {
-				fmt.Println("case 3")
+				//fmt.Println("case 3")
 				myElevInfo.Orders[i][j].Status = 1
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <-light

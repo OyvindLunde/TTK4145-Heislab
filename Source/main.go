@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"./display"
+	//"./display"
 	"./elevio"
 	"./fsm"
 	"./logmanagement"
@@ -40,7 +40,7 @@ func main() {
 	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
 	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights)
 
-	go display.Display()
+	//go display.Display()
 
 	select {}
 }
