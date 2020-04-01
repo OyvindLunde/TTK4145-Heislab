@@ -16,8 +16,6 @@ import (
 const numFloors = 4
 const numButtons = 3
 
-const timerLength = 5; //seconds
-const tickTreshold = 2; //number of tick needed to generate an interupt
 var myElevInfo Elev
 var otherElevInfo []Elev
 
@@ -104,29 +102,8 @@ func SetDisplayUpdates(value bool) {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*Initializes LogManagement*/
-func InitLogManagement(id int, numFloors int, numButtons int) {
-	numButtons = numButtons
-	numFloors = numFloors
-	InitializeMyElevInfo(id)
-	startTicker()
-}
-
-/*Initialises MyElevInfo variable*/
-func InitializeMyElevInfo(id int) {
-	myElevInfo.Id = id
-	myElevInfo.Floor = 0
-	myElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
-	myElevInfo.State = 0
-	for i := 0; i < numFloors; i++ {
-		for j := 0; j < numButtons; j++ {
-			myElevInfo.Orders[i][j].Floor = i
-			myElevInfo.Orders[i][j].ButtonType = j
-			myElevInfo.Orders[i][j].Status = -1
-			myElevInfo.Orders[i][j].Finished = false
-			myElevInfo.Orders[i][j].TimeTicks = 0
-		}
-	}
-	fmt.Println("MyElev initialized")
+func InitLogManagement(id int) {
+	initializeMyElevInfo(id)
 }
 
 /*Inits network communication*/
@@ -138,34 +115,8 @@ func InitCommunication(port int, channels NetworkChannels, toggleLights chan ele
 	fmt.Printf("Network initialized\n")
 }
 
-func startTicker(){
-	ticker := time.NewTicker(timerLength * time.Second)
-	go func() {
-        for {
-            select {
-			case <-ticker.C:
-				fmt.Println("tick")
-                for i:= 0; i < len(otherElevInfo); i++{
-					if otherElevInfo[i].CurrentOrder.Status != -1 && otherElevInfo[i].CurrentOrder.Status != 0{
-						otherElevInfo[i].CurrentOrder.TimeTicks +=1
-						if otherElevInfo[i].CurrentOrder.TimeTicks >= tickTreshold{
-							fmt.Println("Timer interupt")
-							for j:= 0; j < len(otherElevInfo); j++{
-								otherElevInfo[j].Orders[otherElevInfo[i].CurrentOrder.Floor][otherElevInfo[i].CurrentOrder.ButtonType].Status = 0
-							}
-							otherElevInfo[i].CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
-						}
-					}
-				}
-            }
-        }
-    }()
-}
-
-
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-// Logic functions
+// Additional public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*Sends MyElevInfo on channel in parameter*/
@@ -192,6 +143,19 @@ func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLi
 		}
 	}
 }
+
+/*Updates MyElevInfo variable from params*/
+func UpdateMyElevInfo(floor int, order Order, state int) {
+	myElevInfo.Floor = floor
+	myElevInfo.CurrentOrder = order
+	myElevInfo.State = state
+	displayUpdates = true
+}
+
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Private functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*Updates otherelevinfo with info about elev in param*/
 func updateOtherElevInfo(msg Elev) {
@@ -238,12 +202,22 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 	//DisplayUpdates = true
 }
 
-/*Updates MyElevInfo variable from params*/
-func UpdateMyElevInfo(floor int, order Order, state int) {
-	myElevInfo.Floor = floor
-	myElevInfo.CurrentOrder = order
-	myElevInfo.State = state
-	displayUpdates = true
+/*Initialises MyElevInfo variable*/
+func initializeMyElevInfo(id int) {
+	myElevInfo.Id = id
+	myElevInfo.Floor = 0
+	myElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
+	myElevInfo.State = 0
+	for i := 0; i < numFloors; i++ {
+		for j := 0; j < numButtons; j++ {
+			myElevInfo.Orders[i][j].Floor = i
+			myElevInfo.Orders[i][j].ButtonType = j
+			myElevInfo.Orders[i][j].Status = -1
+			myElevInfo.Orders[i][j].Finished = false
+			myElevInfo.Orders[i][j].TimeTicks = 0
+		}
+	}
+	fmt.Println("MyElev initialized")
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -258,3 +232,4 @@ func PrintOrderQueue(queue [numFloors][numButtons]Order) {
 	}
 	fmt.Println("____________")
 }
+

@@ -148,6 +148,12 @@ func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, elevli
 	return true
 }
 
+
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Private Functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 /*Retruns true if this elevator should take order during conflict*/
 func solveConflict(order logmanagement.Order, elev logmanagement.Elev, conflictElevs []logmanagement.Elev) bool {
 	id, floor, _, _ := logmanagement.GetElevInfo(elev)
