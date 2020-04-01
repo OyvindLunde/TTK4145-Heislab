@@ -5,7 +5,6 @@ package orderhandler
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
-	"fmt"
 	"math"
 	"time"
 
@@ -84,7 +83,6 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 				light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
 				lightsChannel <- light
 				newOrderChannel <- order
-				//elevio.SetButtonLamp(a.Button, a.Floor, true)
 				logmanagement.SetDisplayUpdates(true)
 			}
 		}
@@ -103,7 +101,7 @@ func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
 		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-lightschannel:
-			fmt.Println(a)
+			//fmt.Println(a)
 			elevio.SetButtonLamp(a.Button, a.Floor, a.Value)
 		}
 	}

@@ -75,7 +75,6 @@ func Display() {
 			case paint.Event:
 				paintScreen(w, sz, lightGray, blue0) // Paint background and border of screen in the selected colors
 				displayOrderExplanations(w, orderExpl)
-				//fmt.Println(&logmanagement.ElevInfo)
 				displayLocalElevator(w, s, elevStatic, logmanagement.GetOrderList(), logmanagement.GetMyElevInfo(), arrow)
 				displayOtherElevators(w, s, elevStatic, logmanagement.GetOtherElevInfo(), arrow)
 
@@ -163,7 +162,6 @@ func displayOrders(w screen.Window, s screen.Screen, queue [numFloors][numButton
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
 			color := getOrderColor(queue[i][j])
-			//fmt.Println(s)
 			button := drawButton(s, btn_size_x, btn_size_y, color)
 			displayButton(w, button, i, j, start_x)
 		}
@@ -188,10 +186,6 @@ func displayButton(w screen.Window, button screen.Texture, floor int, btnType in
 }
 
 func drawButton(s screen.Screen, x int, y int, color color.RGBA) screen.Texture {
-	//fmt.Println(s)
-	/*fmt.Println(x)
-	fmt.Println(y)
-	fmt.Println(color)*/
 	size0 := image.Point{x - 1, y - 1} // -1 to avoid painting over the white lines in the button panel
 	temp, _ := s.NewBuffer(size0)
 	m := temp.RGBA()
@@ -341,7 +335,6 @@ func drawElevatorFloorNumbers(s screen.Screen) []screen.Texture {
 
 func paintScreen(w screen.Window, sz size.Event, backgroundColor color.RGBA, borderColor color.RGBA) {
 	const inset = 10
-	//fmt.Println(sz)
 	for _, r := range imageutil.Border(sz.Bounds(), inset) {
 		w.Fill(r, borderColor, screen.Src) // Paint border of screen
 	}
@@ -410,7 +403,6 @@ func drawRGBA(m *image.RGBA, str string) {
 			Y: inconsolata.Regular8x16.Metrics().Ascent,
 		},
 	}
-	//d.DrawString(fmt.Sprint(tp))
 	d.DrawString(str)
 }
 
@@ -420,7 +412,6 @@ func drawHorizontalLines(m *image.RGBA, num int, color color.RGBA) {
 	for i := 0; i <= num+1; i++ {
 		drawHorizontalLine(m, intervall*i, color)
 	}
-	//drawHorizontalLine(m, b.Max.Y-1, color) // Supposed to draw a bottom line, but had no effect. Don't know why.
 }
 
 func drawHorizontalLine(m *image.RGBA, y int, color color.RGBA) {

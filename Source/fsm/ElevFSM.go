@@ -58,7 +58,6 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go orderhandler.HandleButtonEvents(channels.ButtonPress, channels.ToggleLights, channels.NewOrder)
 	go orderhandler.UpdateLightsV2(channels.ToggleLights)
-	//go logmanagement.UpdateMyElevInfo(&floor, &currentOrder, &state) // Vurdere å droppe denne? Kjører unødvendig ofte
 
 	for {
 		time.Sleep(20 * time.Millisecond)
@@ -66,7 +65,6 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 		case IDLE:
 			select {
 			case currentOrder = <-channels.NewOrder:
-				fmt.Println(currentOrder)
 				if orderhandler.IsOrderValid(currentOrder) {
 					currentOrder.Status = logmanagement.GetMyElevInfo().Id // Remove this?
 					logmanagement.SetMyElevInfo(floor, currentOrder, state)
@@ -88,8 +86,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))
-					if dir == 0 { // Forslag: Legge inn en CheckForCABOrders funksjon, må i så fall inn i default også
-						//destination = -1 // Unødvendig?
+					if dir == 0 {
 						state = IDLE
 						logmanagement.SetMyElevInfo(floor, NoOrder, state)
 					}
