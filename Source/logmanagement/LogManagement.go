@@ -73,9 +73,15 @@ func GetOrder(floor int, buttonType int) Order {
 }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 func SetOrder(floor int, buttonType int, status int, finished bool) {
 	MyElevInfo.Orders[floor][buttonType].Status = status
 	MyElevInfo.Orders[floor][buttonType].Finished = finished
+=======
+func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
+	myElevInfo.Orders[floor][buttonType].Status = status
+	myElevInfo.Orders[floor][buttonType].Finished = finished
+>>>>>>> Stashed changes
 =======
 func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
 	myElevInfo.Orders[floor][buttonType].Status = status
@@ -136,15 +142,21 @@ func InitializeMyElevInfo(id int) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 			MyElevInfo.Orders[i][j].Floor = i
 			MyElevInfo.Orders[i][j].ButtonType = j
 			MyElevInfo.Orders[i][j].Status = -1
 			MyElevInfo.Orders[i][j].Finished = false
 =======
+=======
+>>>>>>> Stashed changes
 			myElevInfo.Orders[i][j].Floor = i
 			myElevInfo.Orders[i][j].ButtonType = j
 			myElevInfo.Orders[i][j].Status = 2
 			myElevInfo.Orders[i][j].Finished = false
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 		}
 	}
@@ -223,9 +235,12 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 			if msg.Orders[i][j].Finished == true && MyElevInfo.Orders[i][j].Status != -1 {
 				fmt.Println("case 1")
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 				MyElevInfo.Orders[i][j].Status = -1
 				// Replace with finished chan (?)
 =======
+=======
+>>>>>>> Stashed changes
 				myElevInfo.Orders[i][j].Status = 2 
 				// Replace with finished chan
 >>>>>>> Stashed changes
@@ -239,7 +254,11 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 			} else if msg.Orders[i][j].Status == msg.Id && MyElevInfo.Orders[i][j].Status <= 0 && msg.Orders[i][j].Finished == false {
 				fmt.Println("case 3")
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 				MyElevInfo.Orders[i][j].Status = msg.Id
+=======
+				myElevInfo.Orders[i][j].Status = 1
+>>>>>>> Stashed changes
 =======
 				myElevInfo.Orders[i][j].Status = 1
 >>>>>>> Stashed changes
