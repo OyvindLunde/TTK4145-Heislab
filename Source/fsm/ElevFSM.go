@@ -19,6 +19,7 @@ import (
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 type State int
+
 const (
 	INIT    = 0
 	IDLE    = 1
@@ -37,7 +38,6 @@ type FsmChannels struct {
 // Init and FSM
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
 func Initialize(numFloors int, id int, addr int) {
 	elevcontroller.InitializeElevator(numFloors, addr)
 	elevio.SetFloorIndicator(0)
@@ -50,7 +50,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 	dir := 0
 	floor := 0
 	state := IDLE
-	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
+	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 	currentOrder := NoOrder
 
 	go elevio.PollButtons(channels.ButtonPress) // Kan vi legge denne inn i HandleButtonEvents?
@@ -64,15 +64,12 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 		switch state {
 		case IDLE:
 			currentOrder = orderhandler.GetPendingOrder()
-			if currentOrder != NoOrder {
-				ElevList := logmanagement.GetElevList() // ElevList er public så trenger egt ikke denne?
-				if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, currentOrder.Floor, ElevList) {
-					currentOrder.Status = 1
-					orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), 1, false)
-					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
-					state = EXECUTE
-					logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
-				}
+			if orderhandler.ShouldITakeOrder(currentOrder, logmanagement.MyElevInfo, logmanagement.GetElevList()) {
+				currentOrder.Status = logmanagement.MyElevInfo.Id // Remove this?
+				orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.MyElevInfo.Id, false)
+				dir = orderhandler.GetDirection(floor, currentOrder.Floor)
+				state = EXECUTE
+				logmanagement.UpdateMyElevInfo(floor, currentOrder, state)
 			}
 
 		case EXECUTE:

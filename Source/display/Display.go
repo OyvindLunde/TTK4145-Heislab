@@ -174,7 +174,7 @@ func getOrderColor(order logmanagement.Order) color.RGBA {
 	if order.Finished == true {
 		return red
 	}
-	if order.Status == 1 {
+	if order.Status > 0 {
 		return green
 	}
 	if order.Status == 0 {

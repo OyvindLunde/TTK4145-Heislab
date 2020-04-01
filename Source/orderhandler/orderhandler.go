@@ -5,10 +5,10 @@ package orderhandler
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
+	"fmt"
 	"math"
 	"time"
-	"fmt"
-	
+
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
@@ -29,7 +29,7 @@ func GetPendingOrder() logmanagement.Order {
 			}
 		}
 	}
-	return logmanagement.Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
+	return logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 }
 
 /* Returns which direction the elevator should move*/
@@ -71,16 +71,16 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
 	for i := 0; i < 3; i++ {
 		status := int(logmanagement.GetOrder(floor, i).Status)
-		if status != 2 {
+		if status != -1 {
 			UpdateLocalOrders(floor, i, status, true)
 		}
 	} // Nye ordrer i samme etg som kommer inn mens dørene er åpne: Rekker vi å sende at de ordrene er fullført?
 	elevcontroller.ElevStopAtFloor(floor)
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
-		if logmanagement.GetOrder(floor, i).Status != 2 {
-			UpdateLocalOrders(floor, i, int(logmanagement.INACTIVE), false)
+		if logmanagement.GetOrder(floor, i).Status != -1 {
+			UpdateLocalOrders(floor, i, -1, false)
 			light := elevio.PanelLight{Floor: floor, Button: elevio.ButtonType(i), Value: false}
-				lightsChannel <- light
+			lightsChannel <- light
 		}
 	}
 }
@@ -93,48 +93,31 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 		case a := <-ButtonPress:
 			//fmt.Println(a)
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
-			if order.Status == 2 {
+			if order.Status == -1 {
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false)
 				light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
 				lightsChannel <- light
 				//elevio.SetButtonLamp(a.Button, a.Floor, true)
 				logmanagement.DisplayUpdates = true
 			}
-
 		}
 	}
 }
 
 /* Updates the Local Orders*/
-func UpdateLocalOrders(floor int, button int, active int, finished bool) { // Må kanskje endre til active OrderStatus
-	logmanagement.SetOrder(floor, button, logmanagement.OrderStatus(active), finished)
+func UpdateLocalOrders(floor int, button int, active int, finished bool) {
+	logmanagement.SetOrder(floor, button, active, finished)
 	logmanagement.DisplayUpdates = true
-}
-
-/*Updates local lights acording to orders*/
-func UpdateLights(numFloors int, numButtons int) {
-	for {
-		time.Sleep(20 * time.Millisecond)
-		for i := 0; i < numFloors; i++ {
-			for j := 0; j < numButtons; j++ {
-				if logmanagement.GetOrder(i, j).Status == 2 {
-					elevio.SetButtonLamp(elevio.ButtonType(j), i, false)
-				} else {
-					elevio.SetButtonLamp(elevio.ButtonType(j), i, true)
-				}
-			}
-		}
-	}
 }
 
 /*Updates local lights acording to orders*/
 func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
 	for {
 		time.Sleep(20 * time.Millisecond)
-		select{
+		select {
 		case a := <-lightschannel:
 			fmt.Println(a)
-			elevio.SetButtonLamp(a.Button,a.Floor, a.Value)
+			elevio.SetButtonLamp(a.Button, a.Floor, a.Value)
 		}
 	}
 }
@@ -144,14 +127,15 @@ func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 //Returns true if I shuold take order
-func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, destination int, elevlist []logmanagement.Elev) bool {
+func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, elevlist []logmanagement.Elev) bool {
+	if order.Floor == -1 {
+		return false
+	}
+
 	if int(order.ButtonType) == 2 {
 		return true
 	}
 
-	if destination == -1 || order.Status == 2 {
-		return false
-	}
 	conflictElevs := []logmanagement.Elev{}
 	for _, elev := range elevlist {
 		if elev.State == 0 {
@@ -159,20 +143,20 @@ func ShouldITakeOrder(order logmanagement.Order, elev logmanagement.Elev, destin
 		}
 	}
 	if len(conflictElevs) != 0 {
-		return solveConflict(order, elev, destination, conflictElevs)
+		return solveConflict(order, elev, conflictElevs)
 	}
 	return true
 }
 
 /*Retruns true if this elevator should take order during conflict*/
-func solveConflict(order logmanagement.Order, elev logmanagement.Elev, destination int, conflictElevs []logmanagement.Elev) bool {
+func solveConflict(order logmanagement.Order, elev logmanagement.Elev, conflictElevs []logmanagement.Elev) bool {
 	id, floor, _, _ := logmanagement.GetElevInfo(elev)
-	myDist := math.Abs(float64(floor - destination))
+	myDist := math.Abs(float64(floor - order.Floor))
 	for _, conflictElev := range conflictElevs {
 		conflictID, conflictfloor, _, _ := logmanagement.GetElevInfo(conflictElev)
-		if myDist > math.Abs(float64(conflictfloor-destination)) {
+		if myDist > math.Abs(float64(conflictfloor-order.Floor)) {
 			return false
-		} else if myDist == math.Abs(float64(conflictfloor-destination)) && id > conflictID {
+		} else if myDist == math.Abs(float64(conflictfloor-order.Floor)) && id > conflictID {
 			return false
 		}
 	}

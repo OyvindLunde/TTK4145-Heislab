@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"../network"
 	"../elevio"
+	"../network"
 )
 
 const numFloors = 4
@@ -38,21 +38,11 @@ const (
 type Order struct {
 	Floor      int
 	ButtonType int
-	Status     OrderStatus // Rename to status
+	Status     int
 	Finished   bool
 	// Timer   timer
 	// Confirmed bool
 }
-
-/*OrderStatus Enum*/
-type OrderStatus int
-
-const (
-	PENDING  OrderStatus = 0
-	ACTIVE   OrderStatus = 1
-	INACTIVE OrderStatus = 2
-	// ACTIVE = ID?
-)
 
 /*Elevstruct for keeping info about ther elevs*/
 type Elev struct {
@@ -77,7 +67,7 @@ func GetOrder(floor int, buttonType int) Order {
 	return MyElevInfo.Orders[floor][buttonType]
 }
 
-func SetOrder(floor int, buttonType int, status OrderStatus, finished bool) {
+func SetOrder(floor int, buttonType int, status int, finished bool) {
 	MyElevInfo.Orders[floor][buttonType].Status = status
 	MyElevInfo.Orders[floor][buttonType].Finished = finished
 }
@@ -117,13 +107,13 @@ func InitLogManagement(id int, numFloors int, numButtons int) {
 func InitializeMyElevInfo(id int) {
 	MyElevInfo.Id = id
 	MyElevInfo.Floor = 0
-	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: 2, Finished: false}
+	MyElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 	MyElevInfo.State = 0
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
 			MyElevInfo.Orders[i][j].Floor = i
 			MyElevInfo.Orders[i][j].ButtonType = j
-			MyElevInfo.Orders[i][j].Status = 2
+			MyElevInfo.Orders[i][j].Status = -1
 			MyElevInfo.Orders[i][j].Finished = false
 		}
 	}
@@ -135,7 +125,7 @@ func InitCommunication(port int, channels NetworkChannels, toggleLights chan ele
 	go network.RecieveMessage(port, channels.RcvChannel)
 	go network.BrodcastMessage(port, channels.BcastChannel)
 	go SendMyElevInfo(channels.BcastChannel)
-	go UpdateOtherElevListFromNetwork(channels.RcvChannel, toggleLights)
+	go UpdateFromNetwork(channels.RcvChannel, toggleLights)
 	fmt.Printf("Network initialized\n")
 }
 
@@ -152,7 +142,7 @@ func SendMyElevInfo(BcastChannel chan Elev) {
 }
 
 /*Updates OtherElevLsit from channel in parameter*/
-func UpdateOtherElevListFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight) {
+func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight) { // Rename to UpdateFromNetwork
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
@@ -191,22 +181,22 @@ func updateOtherElevInfo(msg Elev) {
 func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
-			if msg.Orders[i][j].Finished == true && MyElevInfo.Orders[i][j].Status != 2 {
+			if msg.Orders[i][j].Finished == true && MyElevInfo.Orders[i][j].Status != -1 {
 				fmt.Println("case 1")
-				MyElevInfo.Orders[i][j].Status = 2 
-				// Replace with finished chan
+				MyElevInfo.Orders[i][j].Status = -1
+				// Replace with finished chan (?)
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
-				lightsChannel <-light
-			} else if msg.Orders[i][j].Status == 0 && MyElevInfo.Orders[i][j].Status == 2 {
+				lightsChannel <- light
+			} else if msg.Orders[i][j].Status == 0 && MyElevInfo.Orders[i][j].Status == -1 {
 				fmt.Println("case 2")
 				MyElevInfo.Orders[i][j].Status = 0
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
-				lightsChannel <-light
-			} else if msg.Orders[i][j].Status == 1 && MyElevInfo.Orders[i][j].Status == 0 && msg.Orders[i][j].Finished == false {
+				lightsChannel <- light
+			} else if msg.Orders[i][j].Status == msg.Id && MyElevInfo.Orders[i][j].Status <= 0 && msg.Orders[i][j].Finished == false {
 				fmt.Println("case 3")
-				MyElevInfo.Orders[i][j].Status = 1
+				MyElevInfo.Orders[i][j].Status = msg.Id
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
-				lightsChannel <-light
+				lightsChannel <- light
 			}
 		}
 	}
