@@ -65,7 +65,6 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 		case IDLE:
 			select {
 			case currentOrder = <-channels.NewOrder:
-				fmt.Println("I got an order")
 				if orderhandler.IsOrderValid(currentOrder) {
 					currentOrder.Status = logmanagement.GetMyElevInfo().Id // Remove this?
 					logmanagement.SetMyElevInfo(floor, currentOrder, state)
@@ -77,7 +76,7 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 						break
 					}
 				}
-				fmt.Println("Setting NoOrder")
+				//fmt.Println("Setting NoOrder")
 				logmanagement.SetMyElevInfo(floor, NoOrder, state)
 			}
 

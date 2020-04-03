@@ -50,7 +50,9 @@ var btn_size_y = btnPanel_y / numFloors  // Height of button in the Button Panel
 func Display() {
 	driver.Main(func(s screen.Screen) {
 		w, err := s.NewWindow(&screen.NewWindowOptions{
-			Title: "Elevator Display",
+			Width:  950,
+			Height: 450,
+			Title:  "Elevator Display",
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -75,7 +77,7 @@ func Display() {
 			case paint.Event:
 				paintScreen(w, sz, lightGray, blue0) // Paint background and border of screen in the selected colors
 				displayOrderExplanations(w, orderExpl)
-				displayLocalElevator(w, s, elevStatic, logmanagement.GetOrderList(), logmanagement.GetMyElevInfo(), arrow)
+				displayLocalElevator(w, s, elevStatic, logmanagement.GetMyElevInfo(), arrow)
 				displayOtherElevators(w, s, elevStatic, logmanagement.GetOtherElevInfo(), arrow)
 
 			case size.Event: // Do not remove this
@@ -90,7 +92,7 @@ func Display() {
 
 func update(w screen.EventDeque) {
 	for {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		if logmanagement.GetDisplayUpdates() {
 			w.Send(paint.Event{})
 			logmanagement.SetDisplayUpdates(false)
@@ -107,23 +109,23 @@ func displayOtherElevators(w screen.Window, s screen.Screen, elevStatic []screen
 		w.Copy(image.Point{btnPanel_x0 + 300*(i+1) + btn_size_x/2 - 25, btnPanel_y0 - 25}, elevatorTitle, elevatorTitle.Bounds(), screen.Src, nil)
 		displayElevInfo(w, drawElevInfo(s, elevList[i]), i+1)
 		displayFloorIndicator(w, arrow, elevList[i].Floor, i+1)
-		displayOrders(w, s, elevList[i].Orders, btnPanel_x0+300*(i+1))
+		displayOrders(w, s, elevList[i], btnPanel_x0+300*(i+1))
 		//displayOrders(w, s, logmanagement.MyElevInfo.Orders, btnPanel_x0+300*(i+1))
 	}
 }
 
-func displayLocalElevator(w screen.Window, s screen.Screen, elevStatic []screen.Texture, queue [numFloors][numButtons]logmanagement.Order, elevInfo logmanagement.Elev, arrow screen.Texture) {
+func displayLocalElevator(w screen.Window, s screen.Screen, elevStatic []screen.Texture, elev logmanagement.Elev, arrow screen.Texture) {
 	displayElevStatic(w, elevStatic, btnPanel_x0)
-	displayLocalElevDynamic(w, s, queue, elevInfo, arrow, btnPanel_x0)
+	displayLocalElevDynamic(w, s, elev, arrow, btnPanel_x0)
 }
 
-func displayLocalElevDynamic(w screen.Window, s screen.Screen, queue [numFloors][numButtons]logmanagement.Order, elevInfo logmanagement.Elev, arrow screen.Texture, start_x int) {
+func displayLocalElevDynamic(w screen.Window, s screen.Screen, elev logmanagement.Elev, arrow screen.Texture, start_x int) {
 	// Display Elevator title with correct Id
-	elevatorTitle := drawText(s, "Elevator "+strconv.Itoa(elevInfo.Id)+" overview", 155, 20) // To improve runtime: change so that this is only calculated once
+	elevatorTitle := drawText(s, "Elevator "+strconv.Itoa(elev.Id)+" overview", 155, 20) // To improve runtime: change so that this is only calculated once
 	w.Copy(image.Point{start_x + btn_size_x/2 - 25, btnPanel_y0 - 25}, elevatorTitle, elevatorTitle.Bounds(), screen.Src, nil)
-	displayElevInfo(w, drawElevInfo(s, elevInfo), 0)
-	displayFloorIndicator(w, arrow, elevInfo.Floor, 0)
-	displayOrders(w, s, queue, btnPanel_x0)
+	displayElevInfo(w, drawElevInfo(s, elev), 0)
+	displayFloorIndicator(w, arrow, elev.Floor, 0)
+	displayOrders(w, s, elev, btnPanel_x0)
 }
 
 func displayElevStatic(w screen.Window, list []screen.Texture, start_x int) {
@@ -158,24 +160,24 @@ func drawElevStatic(s screen.Screen, color color.RGBA) []screen.Texture {
 	return list
 }
 
-func displayOrders(w screen.Window, s screen.Screen, queue [numFloors][numButtons]logmanagement.Order, start_x int) {
+func displayOrders(w screen.Window, s screen.Screen, elev logmanagement.Elev, start_x int) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
-			color := getOrderColor(queue[i][j])
+			color := getOrderColor(elev.Orders[i][j], elev.Id)
 			button := drawButton(s, btn_size_x, btn_size_y, color)
 			displayButton(w, button, i, j, start_x)
 		}
 	}
 }
 
-func getOrderColor(order logmanagement.Order) color.RGBA {
+func getOrderColor(order logmanagement.Order, id int) color.RGBA {
 	if order.Finished == true {
 		return red
 	}
-	if order.Status > 0 {
+	if order.Status == id {
 		return green
 	}
-	if order.Status == 0 {
+	if order.Status >= 0 {
 		return yellow
 	}
 	return black
@@ -187,10 +189,12 @@ func displayButton(w screen.Window, button screen.Texture, floor int, btnType in
 
 func drawButton(s screen.Screen, x int, y int, color color.RGBA) screen.Texture {
 	size0 := image.Point{x - 1, y - 1} // -1 to avoid painting over the white lines in the button panel
-	temp, _ := s.NewBuffer(size0)
+	temp, err := s.NewBuffer(size0)
+	if err != nil {
+		log.Fatal(err)
+	}
 	m := temp.RGBA()
 	b := temp.Bounds()
-
 	for i := b.Min.X + 1; i < b.Max.X-1; i++ {
 		for j := b.Min.Y + 1; j < b.Max.Y-1; j++ {
 			m.SetRGBA(i, j, color)

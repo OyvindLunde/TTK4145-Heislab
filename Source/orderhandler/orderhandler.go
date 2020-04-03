@@ -5,7 +5,6 @@ package orderhandler
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
-	"fmt"
 	"math"
 	"time"
 
@@ -55,7 +54,7 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 
 /*Stops elevator and updates LocalOrders acording to floor in param*/
 func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 3; i++ { // change to numButtons
 		status := int(logmanagement.GetOrder(floor, i).Status)
 		if status != -1 {
 			UpdateLocalOrders(floor, i, status, true)
@@ -124,7 +123,7 @@ func ShouldITakeOrder(myCurrentOrder logmanagement.Order) bool {
 		return true
 	}
 
-	time.Sleep(2000 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	conflictElevs := make([]logmanagement.Elev, 0)
 
@@ -135,7 +134,7 @@ func ShouldITakeOrder(myCurrentOrder logmanagement.Order) bool {
 	}
 
 	if len(conflictElevs) > 0 {
-		fmt.Println("Conflict")
+		//fmt.Println("Conflict")
 		return solveConflict(myCurrentOrder, logmanagement.GetMyElevInfo(), conflictElevs)
 	}
 
