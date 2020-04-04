@@ -65,7 +65,7 @@ func Display() {
 		orderExpl := drawOrderExplanation(s)
 		arrow := drawArrowLeft(s, 30, 20, black, lightGray) // Arrow to use as floor indicator
 
-		go update(w)
+    go update(w)
 
 		var sz size.Event
 		for {

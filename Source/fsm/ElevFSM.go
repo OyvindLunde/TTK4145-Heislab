@@ -39,13 +39,13 @@ type FsmChannels struct {
 // Init and FSM
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-func Initialize(numFloors int, id int, addr int) {
-	elevcontroller.InitializeElevator(numFloors, addr)
+func InitFSM(id int, addr int) {
+	elevcontroller.InitializeElevator(logmanagement.GetNumFloors(), addr)
 	elevio.SetFloorIndicator(0)
 }
 
 /*Elevator FSM*/
-func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
+func RunElevator(channels FsmChannels) {
 	fmt.Println("AutoHeis assemble")
 	//destination := -1
 	dir := 0
@@ -87,7 +87,9 @@ func RunElevator(channels FsmChannels, numFloors int, numButtons int) {
 				floor = a
 				logmanagement.SetMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
+
 				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.GetMyElevInfo(), logmanagement.GetOtherElevInfo()) {
+
 					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
 					elevio.SetMotorDirection(elevio.MotorDirection(dir))

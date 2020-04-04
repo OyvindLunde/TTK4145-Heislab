@@ -4,20 +4,29 @@ import (
 	"fmt"
 	"strconv"
 
-	"./display"
+	//"./display"
 	"./elevio"
 	"./fsm"
 	"./logmanagement"
+	"./ticker"
 )
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Variables
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	//numFloors is declared in Logmanagement
+	//numButtons is declard in Logmangagement
+	const port = 20009 // address for network, do not change
+	const timerLength = 5; //seconds
+	const tickTreshold = 2; //number of tick needed to generate an interupt
+
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Main
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 func main() {
-	numFloors := 4
-	numButtons := 3
-	//id := 1       // elevator id, change for each elevator
-	port := 20009 // address for network, do not change
-	//addr := 11111 // address for tcp connection to simulator, change for each elevator
-
-	id, addr := setParameters()
+	id, addr := setParameters() //Function to take in parameters from user
 
 	fsmChannels := fsm.FsmChannels{
 		ButtonPress:  make(chan elevio.ButtonEvent),
@@ -31,15 +40,23 @@ func main() {
 		BcastChannel: make(chan logmanagement.Elev),
 	}
 
-	fsm.Initialize(numFloors, id, addr)
-	logmanagement.InitLogManagement(id, numFloors, numButtons)
-	go fsm.RunElevator(fsmChannels, numFloors, numButtons)
-	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder)
 
-	go display.Display()
+	fsm.InitFSM(id, addr)
+	logmanagement.InitLogManagement(id)
+	ticker.StartTicker(timerLength,tickTreshold)
 
-	select {}
+	go fsm.RunElevator(fsmChannels)
+	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights)
+
+	//go display.Display()
+
+	select {} // Select to stop main form exiting scope
 }
+
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Input Function
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 func setParameters() (int, int) {
 	var input string

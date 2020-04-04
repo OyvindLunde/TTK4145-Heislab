@@ -3,6 +3,7 @@ package network
 //--------------------------------------------------------------------------------------
 /*This module conains the functions for sending and recieving messages on the nettwork*/
 //---------------------------------------------------------------------------------------
+
 import (
 	"encoding/json"
 	"fmt"
