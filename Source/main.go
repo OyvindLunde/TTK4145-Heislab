@@ -20,22 +20,26 @@ import (
 	const timerLength = 5; //seconds
 	const tickTreshold = 2; //number of tick needed to generate an interupt
 
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 func main() {
 	id, addr := setParameters() //Function to take in parameters from user
 
 	fsmChannels := fsm.FsmChannels{
 		ButtonPress:  make(chan elevio.ButtonEvent),
 		FloorReached: make(chan int),
-		ToggleLights: make(chan elevio.PanelLight),
+		ToggleLights: make(chan elevio.PanelLight, numFloors*numButtons),
+		NewOrder:     make(chan logmanagement.Order, numFloors*numButtons),
 	}
 
 	networkChannels := logmanagement.NetworkChannels{
 		RcvChannel:   make(chan logmanagement.Elev),
 		BcastChannel: make(chan logmanagement.Elev),
 	}
+
 
 	fsm.InitFSM(id, addr)
 	logmanagement.InitLogManagement(id)

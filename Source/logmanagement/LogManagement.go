@@ -16,10 +16,13 @@ import (
 const numFloors = 4
 const numButtons = 3
 
+
+
 var myElevInfo Elev
 var otherElevInfo []Elev
 
-var displayUpdates = false // Used to display the system
+var displayUpdates = false // Used to know when to  update the display
+var orderTimer []ElevTimer
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Declaration of structs and Enums
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -50,8 +53,6 @@ type NetworkChannels struct {
 	BcastChannel chan Elev
 }
 
-
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Setters and Getters
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -68,7 +69,7 @@ func GetOrderList() [numFloors][numButtons]Order {
 	return myElevInfo.Orders
 }
 
-func GetElevList() []Elev {
+func GetOtherElevInfo() []Elev {
 	return otherElevInfo
 }
 
@@ -84,13 +85,20 @@ func GetNumButtons() int {
 	return numButtons
 }
 
-
 func GetMyElevInfo() Elev {
 	return myElevInfo
 }
 
-func GetDisplayUpdates() *bool {
-	return &displayUpdates
+
+func SetMyElevInfo(floor int, order Order, state int) {
+	myElevInfo.Floor = floor
+	myElevInfo.CurrentOrder = order
+	myElevInfo.State = state
+	displayUpdates = true
+}
+
+func GetDisplayUpdates() bool {
+	return displayUpdates
 }
 
 func SetDisplayUpdates(value bool) {
@@ -102,16 +110,17 @@ func SetDisplayUpdates(value bool) {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*Initializes LogManagement*/
+
 func InitLogManagement(id int) {
 	initializeMyElevInfo(id)
 }
 
 /*Inits network communication*/
-func InitCommunication(port int, channels NetworkChannels, toggleLights chan elevio.PanelLight) {
+func InitCommunication(port int, channels NetworkChannels, toggleLights chan elevio.PanelLight, newOrderChannel chan Order) {
 	go network.RecieveMessage(port, channels.RcvChannel)
 	go network.BrodcastMessage(port, channels.BcastChannel)
 	go SendMyElevInfo(channels.BcastChannel)
-	go UpdateFromNetwork(channels.RcvChannel, toggleLights)
+	go UpdateFromNetwork(channels.RcvChannel, toggleLights, newOrderChannel)
 	fmt.Printf("Network initialized\n")
 }
 
@@ -122,23 +131,47 @@ func InitCommunication(port int, channels NetworkChannels, toggleLights chan ele
 /*Sends MyElevInfo on channel in parameter*/
 func SendMyElevInfo(BcastChannel chan Elev) {
 	for {
-		time.Sleep(20 * time.Millisecond)
+
+		time.Sleep(2 * time.Millisecond)
+		//fmt.Println(myElevInfo.CurrentOrder)
 		BcastChannel <- myElevInfo
 	}
 }
 
+func checkForUpdates(msg Elev) bool {
+	for i := 0; i < len(otherElevInfo); i++ {
+		if msg.Id == otherElevInfo[i].Id {
+			if msg.Floor != otherElevInfo[i].Floor {
+				return true
+			}
+			if msg.State != otherElevInfo[i].State {
+				return true
+			}
+			if msg.CurrentOrder != otherElevInfo[i].CurrentOrder {
+				return true
+			}
+			for j := 0; j < numFloors; j++ {
+				for k := 0; k < numButtons; k++ {
+					if msg.Orders[j][k] != otherElevInfo[i].Orders[j][k] {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
 /*Updates OtherElevLsit from channel in parameter*/
-func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight) {
+func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
 			if a.Id != myElevInfo.Id {
-				/*fmt.Println("Received:")
-				PrintOrderQueue(a.Orders)
-				fmt.Println("_____________")*/
 				updateOtherElevInfo(a)
-				updateOrderList(a, lightsChannel)
+				updateOrderList(a, lightsChannel, newOrderChannel)
+				//fmt.Println(a.CurrentOrder)
 			}
 		}
 	}
@@ -159,47 +192,48 @@ func UpdateMyElevInfo(floor int, order Order, state int) {
 
 /*Updates otherelevinfo with info about elev in param*/
 func updateOtherElevInfo(msg Elev) {
+	bool1 := checkForUpdates(msg)
 	for i := 0; i < len(otherElevInfo); i++ {
 		if msg.Id == otherElevInfo[i].Id {
 			otherElevInfo[i].Floor = msg.Floor
 			otherElevInfo[i].CurrentOrder = msg.CurrentOrder
 			otherElevInfo[i].State = msg.State
 			otherElevInfo[i].Orders = msg.Orders
-			/*fmt.Println("Other elevs orders:")
-			PrintOrderQueue(OtherElevInfo[0].Orders)
-			fmt.Println("__________")*/
+			if bool1 {
+				SetDisplayUpdates(true)
+				fmt.Println("Updates")
+			}
 			return
 		}
 	}
 	otherElevInfo = append(otherElevInfo, msg)
 	displayUpdates = true
-
 }
 
 /*Updates orderlist with data stored in elev-param*/
-func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight) {
+func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
-			if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 {
-				//fmt.Println("case 1")
-				myElevInfo.Orders[i][j].Status = 2 
+			if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 { // Order finished by other elev
+				//fmt.Println("Case 1: Order finished by other elevator")
+				myElevInfo.Orders[i][j].Status = -1
 				// Replace with finished chan
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
-				lightsChannel <-light
-			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == -1 {
-				//fmt.Println("case 2")
+				lightsChannel <- light
+			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == -1 && msg.Orders[i][j].Finished == false { // New order received
+				//fmt.Println("Case 2: New Order received from other elevator")
 				myElevInfo.Orders[i][j].Status = 0
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
-				lightsChannel <-light
-			} else if msg.Orders[i][j].Status == 1 && myElevInfo.Orders[i][j].Status == 0 && msg.Orders[i][j].Finished == false {
-				//fmt.Println("case 3")
-				myElevInfo.Orders[i][j].Status = 1
+				lightsChannel <- light
+				newOrderChannel <- msg.Orders[i][j]
+			} else if msg.Orders[i][j].Status == msg.Id && myElevInfo.Orders[i][j].Status <= 0 && msg.Orders[i][j].Finished == false { // Other elev taken order
+				//fmt.Println("Case 3: Order taken by other elevator")
+				myElevInfo.Orders[i][j].Status = msg.Id
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
-				lightsChannel <-light
+				lightsChannel <- light
 			}
 		}
 	}
-	//DisplayUpdates = true
 }
 
 /*Initialises MyElevInfo variable*/

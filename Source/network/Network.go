@@ -1,7 +1,9 @@
 package network
-//-----------------------------------------------------------------------------------------------------------------------------------------------
-/*This module conains the functions for sending and recieving messages on the network*/
-//--------------------------------------------------------------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------
+/*This module conains the functions for sending and recieving messages on the nettwork*/
+//---------------------------------------------------------------------------------------
+
 import (
 	"encoding/json"
 	"fmt"
@@ -28,7 +30,7 @@ func RecieveMessage(port int, chans ...interface{}) {
 	var buf [1024]byte
 	conn := dialBroadcastUDP(port)
 	for {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 		//fmt.Println("In: Receive msg")
 		n, _, _ := conn.ReadFrom(buf[0:])
 		for _, ch := range chans {
@@ -37,8 +39,7 @@ func RecieveMessage(port int, chans ...interface{}) {
 			//fmt.Printf(typeName)
 			if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
 				v := reflect.New(T)
-				//fmt.Println("Receiving:")
-				//fmt.Println(v)
+
 				json.Unmarshal(buf[len(typeName):n], v.Interface())
 				reflect.Select([]reflect.SelectCase{{
 					Dir:  reflect.SelectSend,
@@ -74,19 +75,13 @@ func BrodcastMessage(port int, chans ...interface{}) {
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
 
 	for {
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 		chosen, value, _ := reflect.Select(selectCases)
-		/*fmt.Println("Sending:")
-		fmt.Println(value)
-		fmt.Println("_______________")*/
 		buf, _ := json.Marshal(value.Interface())
 		conn.WriteTo([]byte(typeNames[chosen]+string(buf)), addr)
 	}
 
 }
-
-
-
 
 /*Sets up and returns connection*/
 func dialBroadcastUDP(port int) net.PacketConn {
@@ -102,13 +97,12 @@ func dialBroadcastUDP(port int) net.PacketConn {
 	return conn
 }
 
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Support Functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*Checks that args to Tx'er/Rx'er are valid on param channels*/
- func checkArgs(chans ...interface{}) {
+func checkArgs(chans ...interface{}) {
 	n := 0
 	for range chans {
 		n++
