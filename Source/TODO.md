@@ -11,6 +11,7 @@
 
 - Alt av feilhåndtering
 
+- ordne slik at tickeren trigger et interupt
 
 Spør studass om:
 - Sleep time, særlig for network
