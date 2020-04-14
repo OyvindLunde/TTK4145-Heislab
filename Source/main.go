@@ -34,6 +34,7 @@ func main() {
 		MotorDirection: make(chan int, 2),
 		ToggleLights:   make(chan elevio.PanelLight, logmanagement.GetNumFloors()*logmanagement.GetNumButtons()),
 		NewOrder:       make(chan logmanagement.Order, logmanagement.GetNumFloors()*logmanagement.GetNumButtons()),
+		Reset:			make(chan bool),
 	}
 
 	networkChannels := logmanagement.NetworkChannels{
@@ -46,7 +47,7 @@ func main() {
 	ticker.StartTicker(timerLength, tickTreshold)
 
 	go fsm.RunElevator(fsmChannels)
-	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder)
+	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder, fsmChannels.Reset)
 
 	go display.Display()
 

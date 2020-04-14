@@ -14,6 +14,8 @@ import (
 	"../orderhandler"
 )
 
+var address int
+var _id int
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Structs and enums
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -34,13 +36,18 @@ type FsmChannels struct {
 	MotorDirection chan int
 	ToggleLights   chan elevio.PanelLight
 	NewOrder       chan logmanagement.Order
+	Reset 		   chan bool
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Init and FSM
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
+var state int
+
 func InitFSM(id int, addr int) {
+	_id = id
+	address = addr
 	elevcontroller.InitializeElevator(logmanagement.GetNumFloors(), addr)
 	elevio.SetFloorIndicator(0)
 }
@@ -49,7 +56,7 @@ func InitFSM(id int, addr int) {
 func RunElevator(channels FsmChannels) {
 	fmt.Println("AutoHeis assemble")
 	floor := 0
-	state := IDLE
+	state = IDLE
 	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 	currentOrder := NoOrder
 
@@ -57,6 +64,7 @@ func RunElevator(channels FsmChannels) {
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go orderhandler.HandleButtonEvents(channels.ButtonPress, channels.ToggleLights, channels.NewOrder)
 	go orderhandler.UpdateLightsV2(channels.ToggleLights)
+	go ResetElev(channels)
 
 	for {
 		time.Sleep(20 * time.Millisecond)
@@ -104,9 +112,23 @@ func RunElevator(channels FsmChannels) {
 				}
 			}
 
-		case RESET:
-			//reset elevator
-
 		}
+	}
+}
+
+func ResetElev(channel FsmChannels){
+	for{
+		time.Sleep(20 * time.Millisecond)
+		select{
+		case  <- channel.Reset:
+			elevio.SetMotorDirection(elevio.MD_Down)
+			for elevio.GetFloor() != 0 { //Fix getFloor problemet
+			}
+			elevio.SetMotorDirection(elevio.MD_Stop)
+			logmanagement.InitLogManagement(_id)
+			state = IDLE
+			// readcaborderbackup
+		}
+			
 	}
 }
