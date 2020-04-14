@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	//"./display"
+	"./display"
 	"./elevio"
 	"./fsm"
 	"./logmanagement"
@@ -18,7 +18,7 @@ import (
 	//numButtons is declard in Logmangagement
 	const port = 20009 // address for network, do not change
 	const timerLength = 5; //seconds
-	const tickTreshold = 2; //number of tick needed to generate an interupt
+	const tickTreshold = 3; //number of tick needed to generate an interupt
 
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ func main() {
 	go fsm.RunElevator(fsmChannels)
 	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder)
 
-	//go display.Display()
+	go display.Display()
 
 	select {} // Select to stop main form exiting scope
 }
