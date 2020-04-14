@@ -146,7 +146,6 @@ func ShouldITakeOrder(myCurrentOrder logmanagement.Order) bool {
 
 		}
 	}
-	fmt.Println(len(conflictElevs))
 	if len(conflictElevs) > 0 {
 		return solveConflict(myCurrentOrder, logmanagement.GetMyElevInfo(), conflictElevs)
 	}

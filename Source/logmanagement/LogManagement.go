@@ -62,16 +62,16 @@ func SetOrder(floor int, buttonType int, status int, finished bool, confirm bool
 	myElevInfo.Orders[floor][buttonType].Confirm = confirm
 }
 
-func SetLocalOrderStatus(floor int, button int, status int) {
-	myElevInfo.Orders[floor][button].Status = status
-}
-
 func GetOrderList() [numFloors][numButtons]Order {
 	return myElevInfo.Orders
 }
 
 func GetOtherElevInfo() []Elev {
 	return otherElevInfo
+}
+
+func SetOtherElevInfoState(elev int, state int){
+	otherElevInfo[elev].State =  state
 }
 
 func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
@@ -120,11 +120,11 @@ func InitLogManagement(id int) {
 }
 
 /*Inits network communication*/
-func InitCommunication(port int, channels NetworkChannels, toggleLights chan elevio.PanelLight, newOrderChannel chan Order) {
+func InitCommunication(port int, channels NetworkChannels, toggleLights chan elevio.PanelLight, newOrderChannel chan Order, resetChannel chan bool) {
 	go network.RecieveMessage(port, channels.RcvChannel)
 	go network.BrodcastMessage(port, channels.BcastChannel)
 	go SendMyElevInfo(channels.BcastChannel)
-	go UpdateFromNetwork(channels.RcvChannel, toggleLights, newOrderChannel)
+	go UpdateFromNetwork(channels.RcvChannel, toggleLights, newOrderChannel, resetChannel)
 	fmt.Printf("Network initialized\n")
 }
 
@@ -171,15 +171,19 @@ func checkForUpdates(msg Elev) bool {
 }
 
 /*Updates OtherElevLsit from channel in parameter*/
-func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
+func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order, resetChannel chan bool) {
 	for {
 		time.Sleep(2 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
 			if a.Id != myElevInfo.Id {
+				if checkForReset(a){
+					resetChannel <- true
+				}
 				updateOtherElevInfo(a)
 				updateOrderList(a, lightsChannel, newOrderChannel)
-			}
+			} 
+			
 		}
 	}
 }
@@ -204,7 +208,8 @@ func updateOtherElevInfo(msg Elev) {
 			if otherElevInfo[i].CurrentOrder != msg.CurrentOrder {
 				elevTickerInfo[i] = 0
 			}
-			if otherElevInfo[i].State != -2 {
+			if !checkForReset(msg){
+
 				otherElevInfo[i].Floor = msg.Floor
 				otherElevInfo[i].CurrentOrder = msg.CurrentOrder
 				otherElevInfo[i].State = msg.State
@@ -212,7 +217,8 @@ func updateOtherElevInfo(msg Elev) {
 				if bool1 {
 					SetDisplayUpdates(true)
 				}
-			}
+			} 
+			
 
 			return
 		}
@@ -274,6 +280,19 @@ func initializeMyElevInfo(id int) {
 	fmt.Println("MyElev initialized")
 }
 
+
+func checkForReset(msg Elev) bool{
+	var orderFloor = myElevInfo.CurrentOrder.Floor
+	var orderButton = myElevInfo.CurrentOrder.ButtonType
+	if orderFloor != -1 && orderButton != -1{
+		if msg.Orders[orderFloor][orderButton].Status == -2{
+			myElevInfo.State = -2
+			fmt.Println("resetting")
+			return true
+		} 
+	}
+	return false
+}
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Dev functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

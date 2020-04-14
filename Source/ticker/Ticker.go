@@ -7,9 +7,9 @@ package ticker
 import (
 	"fmt"
 	"time"
-
 	"../logmanagement"
 )
+
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Variables
@@ -22,7 +22,7 @@ var ticker *time.Ticker
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 /*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func StartTicker(tickLength time.Duration, tickTreshold int) {
+func StartTicker(tickLength time.Duration, tickTreshold int){
 	done = make(chan bool)
 	ticker = time.NewTicker(tickLength * time.Second)
 	go checkOnOtherElevs(tickTreshold)
@@ -30,7 +30,7 @@ func StartTicker(tickLength time.Duration, tickTreshold int) {
 }
 
 /*Stops ticker*/
-func StoppTicker() {
+func StoppTicker(){
 	ticker.Stop()
 	done <- true
 
@@ -52,12 +52,10 @@ func checkOnOtherElevs(tickTreshold int) {
 					logmanagement.IncrementElevTickerInfo(i)
 					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold {
 						fmt.Println("Timer interupt")
-						logmanagement.GetOtherElevInfo()[i].State = -2
 						var floor = logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor
 						var button = logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType
-						logmanagement.SetOrder(floor, button, 0, false, false)
-						logmanagement.SetLocalOrderStatus(floor, button, -2)
-						//logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status = -2
+						logmanagement.SetOrder(floor, button, -2, false, true)
+						logmanagement.SetOtherElevInfoState(i, -2)
 					}
 				}
 			}
