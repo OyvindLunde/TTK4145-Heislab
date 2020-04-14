@@ -30,7 +30,7 @@ type Order struct {
 	Status     int
 	Finished   bool
 	TimeTicks  int
-	Confirmed  bool
+	Confirm    bool
 }
 
 /*Elevstruct for keeping info about ther elevs*/
@@ -56,10 +56,10 @@ func GetOrder(floor int, buttonType int) Order {
 	return myElevInfo.Orders[floor][buttonType]
 }
 
-func SetOrder(floor int, buttonType int, status int, finished bool, confirmed bool) {
+func SetOrder(floor int, buttonType int, status int, finished bool, confirm bool) {
 	myElevInfo.Orders[floor][buttonType].Status = status
 	myElevInfo.Orders[floor][buttonType].Finished = finished
-	myElevInfo.Orders[floor][buttonType].Confirmed = confirmed
+	myElevInfo.Orders[floor][buttonType].Confirm = confirm
 }
 
 func GetOrderList() [numFloors][numButtons]Order {
@@ -226,8 +226,8 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderC
 				myElevInfo.Orders[i][j].Status = msg.Id
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
-			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Confirmed == false { // Order confirmed by other elev
-				myElevInfo.Orders[i][j].Confirmed = true
+			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Confirm == false { // Order confirmed by other elev
+				myElevInfo.Orders[i][j].Confirm = true
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
 				newOrderChannel <- msg.Orders[i][j]
@@ -249,7 +249,7 @@ func initializeMyElevInfo(id int) {
 			myElevInfo.Orders[i][j].Status = -1
 			myElevInfo.Orders[i][j].Finished = false
 			myElevInfo.Orders[i][j].TimeTicks = 0
-			myElevInfo.Orders[i][j].Confirmed = false
+			myElevInfo.Orders[i][j].Confirm = false
 		}
 	}
 	fmt.Println("MyElev initialized")

@@ -98,8 +98,8 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 }
 
 /* Updates the Local Orders*/
-func UpdateLocalOrders(floor int, button int, active int, finished bool, confirmed bool) {
-	logmanagement.SetOrder(floor, button, active, finished, confirmed)
+func UpdateLocalOrders(floor int, button int, active int, finished bool, confirm bool) {
+	logmanagement.SetOrder(floor, button, active, finished, confirm)
 	logmanagement.SetDisplayUpdates(true)
 }
 
