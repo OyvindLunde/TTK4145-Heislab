@@ -116,18 +116,18 @@ func RunElevator(channels FsmChannels) {
 	}
 }
 
-func ResetElev(channel FsmChannels){
+func ResetElev(channels FsmChannels){
 	for{
 		time.Sleep(20 * time.Millisecond)
 		select{
-		case  <- channel.Reset:
+		case  <- channels.Reset:
 			elevio.SetMotorDirection(elevio.MD_Down)
 			for elevio.GetFloor() != 0 { //Fix getFloor problemet
 			}
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			logmanagement.InitLogManagement(_id)
+			orderhandler.ReadCabOrderBackup(channels.ToggleLights, channels.NewOrder)
 			state = IDLE
-			// readcaborderbackup
 		}
 			
 	}
