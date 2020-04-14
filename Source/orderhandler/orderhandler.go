@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
+
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
@@ -85,7 +85,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 		case a := <-ButtonPress:
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == -1 {
-        UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false, false)
+				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false, false)
 				UpdateCabOrderBackup()
 
 				if order.ButtonType == 2 || len(logmanagement.GetOtherElevInfo()) == 0 { // Update lights and newOrder only for CAB orders and for single elev state
@@ -100,7 +100,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 }
 
 /* Updates the Local Orders*/
-func UpdateLocalOrders(floor int, button int, active int, finished bool) {
+func UpdateLocalOrders(floor int, button int, active int, finished bool, confirm bool) {
 	UpdateCabOrderBackup()
 	logmanagement.SetOrder(floor, button, active, finished, confirm)
 	logmanagement.SetDisplayUpdates(true)
@@ -134,16 +134,16 @@ func ShouldITakeOrder(myCurrentOrder logmanagement.Order) bool {
 		return true
 	}
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	conflictElevs := make([]logmanagement.Elev, 0)
 
 	for _, otherElev := range logmanagement.GetOtherElevInfo() {
 		if myCurrentOrder.Floor == otherElev.CurrentOrder.Floor && myCurrentOrder.ButtonType == otherElev.CurrentOrder.ButtonType {
-			if otherElev.State != -2{
+			if otherElev.State != -2 {
 				conflictElevs = append(conflictElevs, otherElev)
 			}
-			
+
 		}
 	}
 	fmt.Println(len(conflictElevs))
@@ -228,7 +228,7 @@ func ReadCabOrderBackup(lightsChannel chan<- elevio.PanelLight, newOrderChannel 
 		if status == logmanagement.GetMyElevInfo().Id {
 			fmt.Println("Found active order")
 			order := logmanagement.Order{Floor: floor, ButtonType: 2, Status: 0, Finished: false}
-			logmanagement.SetOrder(floor, 2, 0, false)
+			logmanagement.SetOrder(floor, 2, 0, false, false)
 			light := elevio.PanelLight{Floor: floor, Button: 2, Value: true}
 			lightsChannel <- light
 			newOrderChannel <- order
@@ -239,7 +239,7 @@ func ReadCabOrderBackup(lightsChannel chan<- elevio.PanelLight, newOrderChannel 
 		if status == 0 {
 			fmt.Println("Found pending order")
 			order := logmanagement.Order{Floor: floor, ButtonType: 2, Status: 0, Finished: false}
-			logmanagement.SetOrder(floor, 2, 0, false)
+			logmanagement.SetOrder(floor, 2, 0, false, false)
 			light := elevio.PanelLight{Floor: floor, Button: 2, Value: true}
 			lightsChannel <- light
 			newOrderChannel <- order
