@@ -7,7 +7,7 @@ package orderhandler
 import (
 	"math"
 	"time"
-
+	"fmt"
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
@@ -76,7 +76,6 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 		time.Sleep(20 * time.Millisecond)
 		select {
 		case a := <-ButtonPress:
-			//fmt.Println(a)
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == -1 {
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false, false)
@@ -133,12 +132,14 @@ func ShouldITakeOrder(myCurrentOrder logmanagement.Order) bool {
 
 	for _, otherElev := range logmanagement.GetOtherElevInfo() {
 		if myCurrentOrder.Floor == otherElev.CurrentOrder.Floor && myCurrentOrder.ButtonType == otherElev.CurrentOrder.ButtonType {
-			conflictElevs = append(conflictElevs, otherElev)
+			if otherElev.State != -2{
+				conflictElevs = append(conflictElevs, otherElev)
+			}
+			
 		}
 	}
-
+	fmt.Println(len(conflictElevs))
 	if len(conflictElevs) > 0 {
-		//fmt.Println("Conflict")
 		return solveConflict(myCurrentOrder, logmanagement.GetMyElevInfo(), conflictElevs)
 	}
 
