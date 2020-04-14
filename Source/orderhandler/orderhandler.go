@@ -81,17 +81,13 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 			if order.Status == -1 {
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false, false)
 
-				if order.ButtonType == 2 || len(logmanagement.GetOtherElevInfo()) == 0 {
+				if order.ButtonType == 2 || len(logmanagement.GetOtherElevInfo()) == 0 { // Update lights and newOrder only for CAB orders and for single elev state
 					light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
 					lightsChannel <- light
 					newOrderChannel <- order
 
 				}
 				logmanagement.SetDisplayUpdates(true)
-				/*light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
-				lightsChannel <- light
-				newOrderChannel <- order
-				logmanagement.SetDisplayUpdates(true)*/
 			}
 		}
 	}

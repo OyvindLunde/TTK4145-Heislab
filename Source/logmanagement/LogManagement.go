@@ -29,7 +29,6 @@ type Order struct {
 	ButtonType int
 	Status     int
 	Finished   bool
-	TimeTicks  int
 	Confirm    bool
 }
 
@@ -164,11 +163,9 @@ func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLi
 		time.Sleep(2 * time.Millisecond)
 		select {
 		case a := <-RcvChannel:
-			fmt.Println(a.Id)
 			if a.Id != myElevInfo.Id {
 				updateOtherElevInfo(a)
 				updateOrderList(a, lightsChannel, newOrderChannel)
-				//fmt.Println(a.CurrentOrder)
 			}
 		}
 	}
@@ -248,7 +245,6 @@ func initializeMyElevInfo(id int) {
 			myElevInfo.Orders[i][j].ButtonType = j
 			myElevInfo.Orders[i][j].Status = -1
 			myElevInfo.Orders[i][j].Finished = false
-			myElevInfo.Orders[i][j].TimeTicks = 0
 			myElevInfo.Orders[i][j].Confirm = false
 		}
 	}

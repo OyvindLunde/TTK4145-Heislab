@@ -8,7 +8,7 @@ import (
 	"./elevio"
 	"./fsm"
 	"./logmanagement"
-	"./ticker"
+	//"./ticker"
 )
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ func main() {
 
 	fsm.InitFSM(id, addr)
 	logmanagement.InitLogManagement(id)
-	ticker.StartTicker(timerLength, tickTreshold)
+	//ticker.StartTicker(timerLength, tickTreshold)
 
 	go fsm.RunElevator(fsmChannels)
 	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder)
