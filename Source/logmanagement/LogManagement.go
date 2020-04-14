@@ -61,6 +61,7 @@ func SetOrder(floor int, buttonType int, status int, finished bool, confirm bool
 	myElevInfo.Orders[floor][buttonType].Finished = finished
 	myElevInfo.Orders[floor][buttonType].Confirm = confirm
 }
+
 func GetOrderList() [numFloors][numButtons]Order {
 	return myElevInfo.Orders
 }
@@ -131,9 +132,8 @@ func InitCommunication(port int, channels NetworkChannels, toggleLights chan ele
 // Additional public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-func IncrementElevTickerInfo(elev int){
-	elevTickerInfo[elev] +=1
+func IncrementElevTickerInfo(elev int) {
+	elevTickerInfo[elev] += 1
 }
 
 /*Sends MyElevInfo on channel in parameter*/
@@ -205,10 +205,11 @@ func updateOtherElevInfo(msg Elev) {
 	bool1 := checkForUpdates(msg)
 	for i := 0; i < len(otherElevInfo); i++ {
 		if msg.Id == otherElevInfo[i].Id {
-			if otherElevInfo[i].CurrentOrder != msg.CurrentOrder{
+			if otherElevInfo[i].CurrentOrder != msg.CurrentOrder {
 				elevTickerInfo[i] = 0
 			}
 			if !checkForReset(msg){
+
 				otherElevInfo[i].Floor = msg.Floor
 				otherElevInfo[i].CurrentOrder = msg.CurrentOrder
 				otherElevInfo[i].State = msg.State
@@ -218,6 +219,7 @@ func updateOtherElevInfo(msg Elev) {
 				}
 			} 
 			
+
 			return
 		}
 	}
@@ -247,7 +249,7 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderC
 				myElevInfo.Orders[i][j].Status = msg.Id
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
-			} else if myElevInfo.Orders[i][j].Status == -2{
+			} else if myElevInfo.Orders[i][j].Status == -2 {
 				newOrderChannel <- Order{Floor: i, ButtonType: j, Status: 0, Finished: false}
 				myElevInfo.Orders[i][j].Status = 0
 			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Confirm == false { // Order confirmed by other elev
@@ -278,6 +280,7 @@ func initializeMyElevInfo(id int) {
 	fmt.Println("MyElev initialized")
 }
 
+
 func checkForReset(msg Elev) bool{
 	var orderFloor = myElevInfo.CurrentOrder.Floor
 	var orderButton = myElevInfo.CurrentOrder.ButtonType
@@ -290,7 +293,6 @@ func checkForReset(msg Elev) bool{
 	}
 	return false
 }
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Dev functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

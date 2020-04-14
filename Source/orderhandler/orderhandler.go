@@ -5,8 +5,15 @@ package orderhandler
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
+	"fmt"
+	"io/ioutil"
 	"math"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
 	"time"
+
 	"../elevcontroller"
 	"../elevio"
 	"../logmanagement"
@@ -63,6 +70,7 @@ func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
 		if logmanagement.GetOrder(floor, i).Status != -1 {
 			UpdateLocalOrders(floor, i, -1, false, false)
+			UpdateCabOrderBackup()
 			light := elevio.PanelLight{Floor: floor, Button: elevio.ButtonType(i), Value: false}
 			lightsChannel <- light
 		}
@@ -78,12 +86,12 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == -1 {
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false, false)
+				UpdateCabOrderBackup()
 
 				if order.ButtonType == 2 || len(logmanagement.GetOtherElevInfo()) == 0 { // Update lights and newOrder only for CAB orders and for single elev state
 					light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
 					lightsChannel <- light
 					newOrderChannel <- order
-
 				}
 				logmanagement.SetDisplayUpdates(true)
 			}
@@ -93,6 +101,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 
 /* Updates the Local Orders*/
 func UpdateLocalOrders(floor int, button int, active int, finished bool, confirm bool) {
+	UpdateCabOrderBackup()
 	logmanagement.SetOrder(floor, button, active, finished, confirm)
 	logmanagement.SetDisplayUpdates(true)
 }
@@ -125,16 +134,16 @@ func ShouldITakeOrder(myCurrentOrder logmanagement.Order) bool {
 		return true
 	}
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	conflictElevs := make([]logmanagement.Elev, 0)
 
 	for _, otherElev := range logmanagement.GetOtherElevInfo() {
 		if myCurrentOrder.Floor == otherElev.CurrentOrder.Floor && myCurrentOrder.ButtonType == otherElev.CurrentOrder.ButtonType {
-			if otherElev.State != -2{
+			if otherElev.State != -2 {
 				conflictElevs = append(conflictElevs, otherElev)
 			}
-			
+
 		}
 	}
 	if len(conflictElevs) > 0 {
@@ -161,4 +170,85 @@ func solveConflict(order logmanagement.Order, elev logmanagement.Elev, conflictE
 		}
 	}
 	return true
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Backup of cab orders
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*Updates a txt file of cab orders*/
+func UpdateCabOrderBackup() {
+	filename := "CabOrderBackup" + strconv.Itoa(logmanagement.GetMyElevInfo().Id) + ".txt"
+
+	orders := logmanagement.GetOrderList()
+	cabOrders := make([]int, 0)
+	for _, row := range orders {
+		cabOrders = append(cabOrders, row[2].Status)
+	}
+
+	// convert []int to string
+	cabOrderString := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(cabOrders)), ","), "[]")
+
+	file, err := os.Create(filename)
+	checkError(err)
+
+	defer file.Close()
+
+	_, err = file.WriteString(cabOrderString)
+
+}
+
+/*Reads a txt file of backed up cab orders*/
+func ReadCabOrderBackup(lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
+	filename := "CabOrderBackup" + strconv.Itoa(logmanagement.GetMyElevInfo().Id) + ".txt"
+	fmt.Println("Checking for existing cab orders")
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		fmt.Println("No backup found, creating new")
+		UpdateCabOrderBackup()
+		return
+	}
+	readCab := string(content)
+
+	cabStringList := strings.Split(readCab, ",")
+	cabIntList := []int{}
+
+	// convert []string to []int
+	for _, i := range cabStringList {
+		j, err := strconv.Atoi(i)
+		checkError(err)
+		cabIntList = append(cabIntList, j)
+	}
+
+	fmt.Println(reflect.TypeOf(cabIntList), cabIntList)
+
+	// Add active orders first
+	for floor, status := range cabIntList {
+		if status == logmanagement.GetMyElevInfo().Id {
+			fmt.Println("Found active order")
+			order := logmanagement.Order{Floor: floor, ButtonType: 2, Status: 0, Finished: false}
+			logmanagement.SetOrder(floor, 2, 0, false, false)
+			light := elevio.PanelLight{Floor: floor, Button: 2, Value: true}
+			lightsChannel <- light
+			newOrderChannel <- order
+		}
+	}
+	// Add remaining pending orders
+	for floor, status := range cabIntList {
+		if status == 0 {
+			fmt.Println("Found pending order")
+			order := logmanagement.Order{Floor: floor, ButtonType: 2, Status: 0, Finished: false}
+			logmanagement.SetOrder(floor, 2, 0, false, false)
+			light := elevio.PanelLight{Floor: floor, Button: 2, Value: true}
+			lightsChannel <- light
+			newOrderChannel <- order
+		}
+	}
+
+}
+
+func checkError(e error) {
+	if e != nil {
+		panic(e)
+	}
 }

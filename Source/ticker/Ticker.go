@@ -47,10 +47,10 @@ func checkOnOtherElevs(tickTreshold int) {
 		case <-done:
 			return
 		case <-ticker.C:
-			for i:= 0; i < len(logmanagement.GetElevTickerInfo()); i++{
-				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0{
+			for i := 0; i < len(logmanagement.GetElevTickerInfo()); i++ {
+				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0 {
 					logmanagement.IncrementElevTickerInfo(i)
-					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold{
+					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold {
 						fmt.Println("Timer interupt")
 						var floor = logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor
 						var button = logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType

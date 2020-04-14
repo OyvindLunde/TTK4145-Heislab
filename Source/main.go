@@ -8,18 +8,19 @@ import (
 	"./elevio"
 	"./fsm"
 	"./logmanagement"
+	"./orderhandler"
 	"./ticker"
 )
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Variables
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-	
+
 //numFloors is declared in Logmanagement
 //numButtons is declard in Logmangagement
-const port = 20009 // address for network, do not change
-const timerLength = 5; //seconds
-const tickTreshold = 3; //number of tick needed to generate an interupt
+const port = 20009     // address for network, do not change
+const timerLength = 5  //seconds
+const tickTreshold = 3 //number of tick needed to generate an interupt
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Main
@@ -44,6 +45,7 @@ func main() {
 
 	fsm.InitFSM(id, addr)
 	logmanagement.InitLogManagement(id)
+	orderhandler.ReadCabOrderBackup(fsmChannels.ToggleLights, fsmChannels.NewOrder)
 	ticker.StartTicker(timerLength, tickTreshold)
 
 	go fsm.RunElevator(fsmChannels)
