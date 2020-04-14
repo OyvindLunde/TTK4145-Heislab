@@ -12,7 +12,7 @@ import (
 )
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-// VariablesS
+// Variables
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 var done chan bool
@@ -47,16 +47,17 @@ func checkOnOtherElevs(tickTreshold int) {
 		case <-done:
 			return
 		case <-ticker.C:
-			//fmt .Println("tick")
-			for i := 0; i < len(logmanagement.GetOtherElevInfo()); i++ {
+			for i := 0; i < len(logmanagement.GetElevTickerInfo()); i++ {
 				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0 {
-					logmanagement.GetOtherElevInfo()[i].CurrentOrder.TimeTicks += 1
-					if logmanagement.GetOtherElevInfo()[i].CurrentOrder.TimeTicks >= tickTreshold {
+					logmanagement.IncrementElevTickerInfo(i)
+					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold {
 						fmt.Println("Timer interupt")
-						for j := 0; j < len(logmanagement.GetOtherElevInfo()); j++ {
-							logmanagement.GetOtherElevInfo()[j].Orders[logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor][logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType].Status = 0
-						}
-						logmanagement.GetOtherElevInfo()[i].CurrentOrder = logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
+						logmanagement.GetOtherElevInfo()[i].State = -2
+						var floor = logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor
+						var button = logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType
+						logmanagement.SetOrder(floor, button, 0, false, false)
+						logmanagement.SetLocalOrderStatus(floor, button, -2)
+						//logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status = -2
 					}
 				}
 			}
