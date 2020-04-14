@@ -8,18 +8,19 @@ import (
 	"./elevio"
 	"./fsm"
 	"./logmanagement"
+	"./orderhandler"
 	"./ticker"
 )
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Variables
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-	
-	//numFloors is declared in Logmanagement
-	//numButtons is declard in Logmangagement
-	const port = 20009 // address for network, do not change
-	const timerLength = 5; //seconds
-	const tickTreshold = 2; //number of tick needed to generate an interupt
 
+//numFloors is declared in Logmanagement
+//numButtons is declard in Logmangagement
+const port = 20009     // address for network, do not change
+const timerLength = 5  //seconds
+const tickTreshold = 2 //number of tick needed to generate an interupt
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Main
@@ -40,10 +41,10 @@ func main() {
 		BcastChannel: make(chan logmanagement.Elev),
 	}
 
-
 	fsm.InitFSM(id, addr)
 	logmanagement.InitLogManagement(id)
-	ticker.StartTicker(timerLength,tickTreshold)
+	orderhandler.ReadCabOrderBackup(fsmChannels.ToggleLights, fsmChannels.NewOrder)
+	ticker.StartTicker(timerLength, tickTreshold)
 
 	go fsm.RunElevator(fsmChannels)
 	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder)
@@ -52,7 +53,6 @@ func main() {
 
 	select {} // Select to stop main form exiting scope
 }
-
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Input Function
