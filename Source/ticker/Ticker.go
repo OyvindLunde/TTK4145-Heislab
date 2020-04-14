@@ -7,9 +7,9 @@ package ticker
 import (
 	"fmt"
 	"time"
+
 	"../logmanagement"
 )
-
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Variables
@@ -22,7 +22,7 @@ var ticker *time.Ticker
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 /*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func StartTicker(tickLength time.Duration, tickTreshold int){
+func StartTicker(tickLength time.Duration, tickTreshold int) {
 	done = make(chan bool)
 	ticker = time.NewTicker(tickLength * time.Second)
 	go checkOnOtherElevs(tickTreshold)
@@ -30,7 +30,7 @@ func StartTicker(tickLength time.Duration, tickTreshold int){
 }
 
 /*Stops ticker*/
-func StoppTicker(){
+func StoppTicker() {
 	ticker.Stop()
 	done <- true
 
