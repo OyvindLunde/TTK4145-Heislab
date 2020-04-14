@@ -29,10 +29,11 @@ const (
 )
 
 type FsmChannels struct {
-	ButtonPress  chan elevio.ButtonEvent
-	FloorReached chan int
-	ToggleLights chan elevio.PanelLight
-	NewOrder     chan logmanagement.Order
+	ButtonPress    chan elevio.ButtonEvent
+	FloorReached   chan int
+	MotorDirection chan int
+	ToggleLights   chan elevio.PanelLight
+	NewOrder       chan logmanagement.Order
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -47,8 +48,6 @@ func InitFSM(id int, addr int) {
 /*Elevator FSM*/
 func RunElevator(channels FsmChannels) {
 	fmt.Println("AutoHeis assemble")
-	//destination := -1
-	dir := 0
 	floor := 0
 	state := IDLE
 	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
@@ -66,44 +65,42 @@ func RunElevator(channels FsmChannels) {
 			select {
 			case currentOrder = <-channels.NewOrder:
 				if orderhandler.IsOrderValid(currentOrder) {
-					currentOrder.Status = logmanagement.GetMyElevInfo().Id // Remove this?
+					currentOrder.Status = logmanagement.GetMyElevInfo().Id
 					logmanagement.SetMyElevInfo(floor, currentOrder, state)
 					if orderhandler.ShouldITakeOrder(currentOrder) {
 						orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.GetMyElevInfo().Id, false)
-						dir = orderhandler.GetDirection(floor, currentOrder.Floor)
+						channels.MotorDirection <- orderhandler.GetDirection(floor, currentOrder.Floor)
 						state = EXECUTE
 						logmanagement.SetMyElevInfo(floor, currentOrder, state)
 						break
 					}
 				}
-				//fmt.Println("Setting NoOrder")
 				logmanagement.SetMyElevInfo(floor, NoOrder, state)
 			}
 
 		case EXECUTE:
-			elevio.SetMotorDirection(elevio.MotorDirection(dir)) // Blir kalt (unødvendig) mange ganger. Men er "sikker"
 			select {
-			case a := <-channels.FloorReached:
-				floor = a
-				logmanagement.SetMyElevInfo(floor, currentOrder, state)
-				elevio.SetFloorIndicator(floor)
-
-				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.GetMyElevInfo(), logmanagement.GetOtherElevInfo()) {
-
-					orderhandler.StopAtFloor(floor, channels.ToggleLights)
-					dir = orderhandler.GetDirection(floor, currentOrder.Floor)
-					elevio.SetMotorDirection(elevio.MotorDirection(dir))
-					if dir == 0 {
-						state = IDLE
-						logmanagement.SetMyElevInfo(floor, NoOrder, state)
-					}
-				}
-
-			default:
+			case dir := <-channels.MotorDirection:
+				elevio.SetMotorDirection(elevio.MotorDirection(dir))
 				if dir == 0 {
 					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					state = IDLE
 					logmanagement.SetMyElevInfo(floor, NoOrder, state)
+				}
+
+			case a := <-channels.FloorReached: //annet navn enn "a"?
+				floor = a
+				logmanagement.SetMyElevInfo(floor, currentOrder, state)
+				elevio.SetFloorIndicator(floor)
+				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.GetMyElevInfo(), logmanagement.GetOtherElevInfo()) {
+					orderhandler.StopAtFloor(floor, channels.ToggleLights)
+					dir := orderhandler.GetDirection(floor, currentOrder.Floor)
+					if dir == 0 {
+						state = IDLE
+						logmanagement.SetMyElevInfo(floor, NoOrder, state)
+					} else {
+						channels.MotorDirection <- dir
+					}
 				}
 			}
 
