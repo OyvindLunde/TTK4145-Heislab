@@ -7,9 +7,9 @@ package ticker
 import (
 	"fmt"
 	"time"
+
 	"../logmanagement"
 )
-
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // VariablesS
@@ -22,7 +22,7 @@ var ticker *time.Ticker
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 /*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func StartTicker(tickLength time.Duration, tickTreshold int){
+func StartTicker(tickLength time.Duration, tickTreshold int) {
 	done = make(chan bool)
 	ticker = time.NewTicker(tickLength * time.Second)
 	go checkOnOtherElevs(tickTreshold)
@@ -30,7 +30,7 @@ func StartTicker(tickLength time.Duration, tickTreshold int){
 }
 
 /*Stops ticker*/
-func StoppTicker(){
+func StoppTicker() {
 	ticker.Stop()
 	done <- true
 
@@ -47,13 +47,13 @@ func checkOnOtherElevs(tickTreshold int) {
 		case <-done:
 			return
 		case <-ticker.C:
-			fmt .Println("tick")
-			for i:= 0; i < len(logmanagement.GetOtherElevInfo()); i++{
-				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0{
-					logmanagement.GetOtherElevInfo()[i].CurrentOrder.TimeTicks +=1
-					if logmanagement.GetOtherElevInfo()[i].CurrentOrder.TimeTicks >= tickTreshold{
+			//fmt.Println("tick")
+			for i := 0; i < len(logmanagement.GetOtherElevInfo()); i++ {
+				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0 {
+					logmanagement.GetOtherElevInfo()[i].CurrentOrder.TimeTicks += 1
+					if logmanagement.GetOtherElevInfo()[i].CurrentOrder.TimeTicks >= tickTreshold {
 						fmt.Println("Timer interupt")
-						for j:= 0; j < len(logmanagement.GetOtherElevInfo()); j++{
+						for j := 0; j < len(logmanagement.GetOtherElevInfo()); j++ {
 							logmanagement.GetOtherElevInfo()[j].Orders[logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor][logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType].Status = 0
 						}
 						logmanagement.GetOtherElevInfo()[i].CurrentOrder = logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
