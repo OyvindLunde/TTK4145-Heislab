@@ -68,7 +68,7 @@ func RunElevator(channels FsmChannels) {
 					currentOrder.Status = logmanagement.GetMyElevInfo().Id
 					logmanagement.SetMyElevInfo(floor, currentOrder, state)
 					if orderhandler.ShouldITakeOrder(currentOrder) {
-						orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.GetMyElevInfo().Id, false)
+						orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.GetMyElevInfo().Id, false, true)
 						channels.MotorDirection <- orderhandler.GetDirection(floor, currentOrder.Floor)
 						state = EXECUTE
 						logmanagement.SetMyElevInfo(floor, currentOrder, state)
