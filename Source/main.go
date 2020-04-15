@@ -34,7 +34,7 @@ func main() {
 		MotorDirection: make(chan int, 2),
 		ToggleLights:   make(chan elevio.PanelLight, 100*logmanagement.GetNumFloors()*logmanagement.GetNumButtons()),
 		NewOrder:       make(chan logmanagement.Order, 100*logmanagement.GetNumFloors()*logmanagement.GetNumButtons()),
-		Reset:			make(chan bool),
+		Reset:			make(chan bool, 100),
 	}
 
 	networkChannels := logmanagement.NetworkChannels{

@@ -269,7 +269,10 @@ func updateOtherElevInfo(msg Elev) {
 func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
-			if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 { // Order finished by other elev
+			if myElevInfo.Orders[i][j].Status == -2 {
+				newOrderChannel <- Order{Floor: i, ButtonType: j, Status: 0, Finished: false}
+				myElevInfo.Orders[i][j].Status = 0
+			} else if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 { // Order finished by other elev
 				//fmt.Println("Case 1: Order finished by other elevator")
 				myElevInfo.Orders[i][j].Status = -1
 				// Replace with finished chan
@@ -286,9 +289,6 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderC
 				myElevInfo.Orders[i][j].Status = msg.Id
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
-			} else if myElevInfo.Orders[i][j].Status == -2 {
-				newOrderChannel <- Order{Floor: i, ButtonType: j, Status: 0, Finished: false}
-				myElevInfo.Orders[i][j].Status = 0
 			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Confirm == false { // Order confirmed by other elev
 				myElevInfo.Orders[i][j].Confirm = true
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}

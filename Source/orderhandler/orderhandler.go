@@ -198,7 +198,6 @@ func UpdateCabOrderBackup() {
 	cabOrders := make([]int, 0)
 	for _, row := range orders {
 		cabOrders = append(cabOrders, row[2].Status)
-		//fmt.Println(row[2].Status)
 	}
 
 	// convert []int to string
