@@ -65,7 +65,7 @@ func Display() {
 		orderExpl := drawOrderExplanation(s)
 		arrow := drawArrowLeft(s, 30, 20, black, lightGray) // Arrow to use as floor indicator
 
-    go update(w)
+		go update(w)
 
 		var sz size.Event
 		for {
@@ -203,6 +203,7 @@ func drawButton(s screen.Screen, x int, y int, color color.RGBA) screen.Texture 
 
 	rect, _ := s.NewTexture(size0)
 	rect.Upload(image.Point{}, temp, temp.Bounds())
+	defer temp.Release()
 	return rect
 }
 
