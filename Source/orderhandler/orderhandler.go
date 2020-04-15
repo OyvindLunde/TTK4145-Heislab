@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
-	"reflect"
+	//"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -60,7 +60,7 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 
 /*Stops elevator and updates LocalOrders acording to floor in param*/
 func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
-	for i := 0; i < 3; i++ { // change to numButtons
+	for i := 0; i < logmanagement.GetNumButtons(); i++ { 
 		status := int(logmanagement.GetOrder(floor, i).Status)
 		if status != -1 {
 			UpdateLocalOrders(floor, i, status, true, false)
@@ -70,7 +70,6 @@ func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
 		if logmanagement.GetOrder(floor, i).Status != -1 {
 			UpdateLocalOrders(floor, i, -1, false, false)
-			UpdateCabOrderBackup()
 			light := elevio.PanelLight{Floor: floor, Button: elevio.ButtonType(i), Value: false}
 			lightsChannel <- light
 		}
@@ -86,7 +85,7 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == -1 {
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false, false)
-				UpdateCabOrderBackup()
+				
 
 				if order.ButtonType == 2 || len(logmanagement.GetOtherElevInfo()) == 0 { // Update lights and newOrder only for CAB orders and for single elev state
 					light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
@@ -101,8 +100,8 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 
 /* Updates the Local Orders*/
 func UpdateLocalOrders(floor int, button int, active int, finished bool, confirm bool) {
-	UpdateCabOrderBackup()
 	logmanagement.SetOrder(floor, button, active, finished, confirm)
+	UpdateCabOrderBackup()
 	logmanagement.SetDisplayUpdates(true)
 }
 
@@ -120,7 +119,7 @@ func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
 func CheckForUnconfirmedOrders(lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
 	orderList := logmanagement.GetOrderList()
 	for i := 0; i < logmanagement.GetNumFloors(); i++ {
-		for j := 0; j < logmanagement.GetNumButtons(); j++ {
+		for j := 0; j < logmanagement.GetNumButtons()-1; j++ {
 			if orderList[i][j].Status == 0 && orderList[i][j].Confirm == false {
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
@@ -199,6 +198,7 @@ func UpdateCabOrderBackup() {
 	cabOrders := make([]int, 0)
 	for _, row := range orders {
 		cabOrders = append(cabOrders, row[2].Status)
+		//fmt.Println(row[2].Status)
 	}
 
 	// convert []int to string
@@ -235,12 +235,10 @@ func ReadCabOrderBackup(lightsChannel chan<- elevio.PanelLight, newOrderChannel 
 		cabIntList = append(cabIntList, j)
 	}
 
-	fmt.Println(reflect.TypeOf(cabIntList), cabIntList)
-
 	// Add active orders first
 	for floor, status := range cabIntList {
-		if status == logmanagement.GetMyElevInfo().Id {
-			fmt.Println("Found active order")
+		if status != -1 {
+			//fmt.Println("Found active order")
 			order := logmanagement.Order{Floor: floor, ButtonType: 2, Status: 0, Finished: false}
 			logmanagement.SetOrder(floor, 2, 0, false, false)
 			light := elevio.PanelLight{Floor: floor, Button: 2, Value: true}
@@ -249,7 +247,7 @@ func ReadCabOrderBackup(lightsChannel chan<- elevio.PanelLight, newOrderChannel 
 		}
 	}
 	// Add remaining pending orders
-	for floor, status := range cabIntList {
+	/*for floor, status := range cabIntList {
 		if status == 0 {
 			fmt.Println("Found pending order")
 			order := logmanagement.Order{Floor: floor, ButtonType: 2, Status: 0, Finished: false}
@@ -258,7 +256,8 @@ func ReadCabOrderBackup(lightsChannel chan<- elevio.PanelLight, newOrderChannel 
 			lightsChannel <- light
 			newOrderChannel <- order
 		}
-	}
+	}*/
+	time.Sleep(1*time.Second)
 
 }
 

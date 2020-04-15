@@ -56,13 +56,15 @@ func checkOnOtherElevs(tickTreshold int, lightsChannel chan<- elevio.PanelLight,
 				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0 {
 					logmanagement.IncrementElevTickerInfo(i)
 					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold && len(logmanagement.GetElevTickerInfo()) != 0{
-						fmt.Println("Timer interupt")
+						fmt.Println("Timer interrupt")
 						var floor = logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor
 						var button = logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType
 						logmanagement.SetOrder(floor, button, -2, false, true)
+						time.Sleep(1 * time.Second)
 						logmanagement.RemoveElevFromOtherElevInfo(i)
 						logmanagement.RemoveElevFromelevTickerInfo(i)
 						logmanagement.RemoveHeartbeat(i)
+						logmanagement.SetOrder(floor, button, 0, false, true)
 						order := logmanagement.Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
 						newOrderChannel <- order
 						orderhandler.CheckForUnconfirmedOrders(lightsChannel, newOrderChannel)
