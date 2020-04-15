@@ -117,6 +117,21 @@ func UpdateLightsV2(lightschannel chan elevio.PanelLight) {
 	}
 }
 
+func CheckForUnconfirmedOrders(lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
+	orderList := logmanagement.GetOrderList()
+	for i := 0; i < logmanagement.GetNumFloors(); i++ {
+		for j := 0; j < logmanagement.GetNumButtons(); j++ {
+			if orderList[i][j].Status == 0 && orderList[i][j].Confirm == false {
+				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
+				lightsChannel <- light
+				order := logmanagement.Order{Floor: i, ButtonType: j, Status: 0, Finished: false}
+				newOrderChannel <- order
+			}
+		}
+	}
+}
+
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Cost Function
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

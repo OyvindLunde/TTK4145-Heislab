@@ -21,7 +21,6 @@ import (
 const port = 20009     // address for network, do not change
 const timerLength = 5  //seconds
 const tickTreshold = 3 //number of tick needed to generate an interupt
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -33,8 +32,8 @@ func main() {
 		ButtonPress:    make(chan elevio.ButtonEvent),
 		FloorReached:   make(chan int),
 		MotorDirection: make(chan int, 2),
-		ToggleLights:   make(chan elevio.PanelLight, logmanagement.GetNumFloors()*logmanagement.GetNumButtons()),
-		NewOrder:       make(chan logmanagement.Order, logmanagement.GetNumFloors()*logmanagement.GetNumButtons()),
+		ToggleLights:   make(chan elevio.PanelLight, 100*logmanagement.GetNumFloors()*logmanagement.GetNumButtons()),
+		NewOrder:       make(chan logmanagement.Order, 100*logmanagement.GetNumFloors()*logmanagement.GetNumButtons()),
 		Reset:			make(chan bool),
 	}
 
@@ -46,7 +45,7 @@ func main() {
 	fsm.InitFSM(id, addr)
 	logmanagement.InitLogManagement(id)
 	orderhandler.ReadCabOrderBackup(fsmChannels.ToggleLights, fsmChannels.NewOrder)
-	ticker.StartTicker(timerLength, tickTreshold)
+	ticker.StartTicker(timerLength, tickTreshold, fsmChannels.ToggleLights, fsmChannels.NewOrder)
 
 	go fsm.RunElevator(fsmChannels)
 	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder, fsmChannels.Reset)

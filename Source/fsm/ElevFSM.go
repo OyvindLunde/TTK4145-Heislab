@@ -121,6 +121,7 @@ func ResetElev(channels FsmChannels){
 		time.Sleep(20 * time.Millisecond)
 		select{
 		case  <- channels.Reset:
+			fmt.Println("starts reset")
 			elevio.SetMotorDirection(elevio.MD_Down)
 			for elevio.GetFloor() != 0 { //Fix getFloor problemet
 			}
@@ -128,6 +129,8 @@ func ResetElev(channels FsmChannels){
 			logmanagement.InitLogManagement(_id)
 			orderhandler.ReadCabOrderBackup(channels.ToggleLights, channels.NewOrder)
 			state = IDLE
+			logmanagement.SetMyElevInfo(-1,logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}, state)
+			fmt.Println("done reseting")
 		}
 			
 	}

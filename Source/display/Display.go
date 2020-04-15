@@ -358,7 +358,7 @@ func convState2String(state int) string {
 	if state == 2 {
 		return "EXECUTE"
 	}
-	if state == 3 {
+	if state == -2 {
 		return "RESET"
 	}
 	if state == 4 {
