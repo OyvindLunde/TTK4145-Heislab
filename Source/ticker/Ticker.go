@@ -5,6 +5,7 @@ package ticker
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
+	"sync"
 	"time"
 )
 
@@ -12,60 +13,97 @@ import (
 // Variables
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-var Done chan bool
-var Ticker *time.Ticker
+var heartbeatThreshold int
+var currentOrderThres int
 
-var elevTickerInfo []int
-var heartbeat []int
+var done chan bool
+var ticker *time.Ticker
+
+var orderTicker map[int]int //Keeps track of how long an order has been active
+var heartbeat map[int]int   //Keeps track of how long its been since last we heard from an elevator
+var _mtx sync.Mutex
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-
-func GetElevTickerInfo() []int { // Move/Delete
-	return elevTickerInfo
+/*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
+func StartTicker(tickLength time.Duration, heartBeatThreshold int, currentOrderThreshold int) {
+	currentOrderThres = currentOrderThreshold
+	heartbeatThreshold = heartBeatThreshold
+	done = make(chan bool)
+	ticker = time.NewTicker(tickLength * time.Second)
+	orderTicker = make(map[int]int)
+	heartbeat = make(map[int]int)
+	_mtx = sync.Mutex{}
+	go elevTicker()
 }
 
-func IncrementElevTickerInfo(elev int) {
-	elevTickerInfo[elev] += 1
+/*Stops ticker*/
+func StoppTicker() {
+	ticker.Stop()
+	done <- true
+
 }
 
-func ResetElevTickerInfo(elev int) {
-	elevTickerInfo[elev] = 0
+func ResetOrderTicker(id int) {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	orderTicker[id] = 0
+}
+
+func AddElevToTicker(id int) {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	heartbeat[id] = 0
+	orderTicker[id] = 0
+}
+
+func DeleteElevFromTicker(id int) {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	delete(heartbeat, id)
+	delete(orderTicker, id)
+}
+
+func ResetHeartBeat(id int) {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	heartbeat[id] = 0
+}
+
+func IsElevAlive(id int) bool {
+	return heartbeat[id] < heartbeatThreshold
+}
+
+func HasCurrentOrderTimedOut(id int) bool {
+	return orderTicker[id] > currentOrderThres
 }
 
 func ClearElevTickerInfo() {
-	elevTickerInfo = elevTickerInfo[:0]
-}
-
-func AppendToElevTickerInfo() {
-	elevTickerInfo = append(elevTickerInfo, 0)
-}
-
-func RemoveElevFromelevTickerInfo(i int) {
-	copy(elevTickerInfo[i:], elevTickerInfo[i+1:])          // Shift a[i+1:] left one index.
-	elevTickerInfo = elevTickerInfo[:len(elevTickerInfo)-1] // Truncate slice.
-}
-
-func GetHeartBeat(index int) int {
-	return heartbeat[index]
-}
-
-func IncrementHeartBeat() {
-	for i := 0; i < len(heartbeat); i++ {
-		heartbeat[i]++
+	for key, _ := range heartbeat {
+		DeleteElevFromTicker(key)
 	}
 }
 
-func ResetHeartBeat(i int) {
-	heartbeat[i] = 0
-}
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+// Private functions
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-func AppendToHeartBeat() {
-	heartbeat = append(heartbeat, 0)
-}
+/*checks if the other elevators finishes orders within ticklength * tickTreshold seconds*/
+func elevTicker() {
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			_mtx.Lock()
 
-func RemoveHeartbeat(i int) {
-	copy(heartbeat[i:], heartbeat[i+1:])     // Shift a[i+1:] left one index.
-	heartbeat = heartbeat[:len(heartbeat)-1] // Truncate slice.
+			for key, _ := range heartbeat {
+				heartbeat[key]++
+				orderTicker[key]++
+			}
+			_mtx.Unlock()
+
+		}
+	}
 }

@@ -130,6 +130,7 @@ func Communication(port int, channels NetworkChannels, toggleLights chan elevio.
 	go network.BrodcastMessage(port, channels.BcastChannel)
 	go SendMyElevInfo(channels.BcastChannel)
 	go UpdateFromNetwork(channels.RcvChannel, toggleLights, newOrderChannel, resetChannel)
+	go checkOnOtherElevs(toggleLights, newOrderChannel)
 	fmt.Printf("Network initialized\n")
 }
 
@@ -208,28 +209,26 @@ func updateOtherElevInfo(msg Elev) {
 	shouldIUpdateDisplay := checkForRemoteUpdates(msg)
 	for i := 0; i < len(otherElevInfo); i++ {
 		if msg.Id == otherElevInfo[i].Id {
-			ticker.ResetHeartBeat(i)
+			ticker.ResetHeartBeat(msg.Id)
 			if otherElevInfo[i].CurrentOrder != msg.CurrentOrder {
-				ticker.ResetElevTickerInfo(i)
+				ticker.ResetOrderTicker(msg.Id)
 			}
 			if !shouldIReset(msg) {
 				otherElevInfo[i].Floor = msg.Floor
 				otherElevInfo[i].CurrentOrder = msg.CurrentOrder
 				otherElevInfo[i].State = msg.State
 				otherElevInfo[i].Orders = msg.Orders
-			}
 
-			if shouldIUpdateDisplay {
-				SetDisplayUpdates(true)
+				if shouldIUpdateDisplay {
+					SetDisplayUpdates(true)
+				}
 			}
 
 			return
 		}
 	}
-
+	ticker.AddElevToTicker(msg.Id)
 	otherElevInfo = append(otherElevInfo, msg)
-	ticker.AppendToElevTickerInfo()
-	ticker.AppendToHeartBeat()
 	displayUpdates = true
 }
 
@@ -288,51 +287,42 @@ func checkForUnconfirmedOrders(lightsChannel chan<- elevio.PanelLight, newOrderC
 	}
 }
 
-/*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func StartTicker(tickLength time.Duration, tickTreshold int, heartbeatThreshold int, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
-	ticker.Done = make(chan bool)
-	ticker.Ticker = time.NewTicker(tickLength * time.Second)
-	go checkOnOtherElevs(tickTreshold, heartbeatThreshold, lightsChannel, newOrderChannel)
-
-}
-
-/*checks if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func checkOnOtherElevs(tickTreshold int, heartbeatThreshold int, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
+func checkOnOtherElevs(lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for {
-		time.Sleep(20 * time.Millisecond)
-		select {
-		case <-ticker.Done:
-			return
-		case <-ticker.Ticker.C:
-			ticker.IncrementHeartBeat()
-			for i := 0; i < len(ticker.GetElevTickerInfo()); i++ {
-				if otherElevInfo[i].CurrentOrder.Status != -1 && otherElevInfo[i].CurrentOrder.Status != 0 {
-					ticker.IncrementElevTickerInfo(i)
-					if ticker.GetElevTickerInfo()[i] >= tickTreshold && len(ticker.GetElevTickerInfo()) != 0 {
-						fmt.Println("Timer interrupt") // Delete til slutt
-						var floor = otherElevInfo[i].CurrentOrder.Floor
-						var button = otherElevInfo[i].CurrentOrder.ButtonType
-						SetOrder(floor, button, -2, false, true)
-						time.Sleep(3000 * time.Millisecond)
-						SetOrder(floor, button, -1, false, true)
-						RemoveElevFromOtherElevInfo(i)
-						ticker.RemoveElevFromelevTickerInfo(i)
-						ticker.RemoveHeartbeat(i)
-						if button != 2 {
-							SetOrder(floor, button, 0, false, true)
-							order := Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
-							newOrderChannel <- order
-						}
-						checkForUnconfirmedOrders(lightsChannel, newOrderChannel)
-						SetDisplayUpdates(true)
-					}
-				} else if ticker.GetHeartBeat(i) > heartbeatThreshold { //burde være dynamisk
+		time.Sleep(500 * time.Millisecond)
+		for i := 0; i < len(otherElevInfo); i++ {
+			key := otherElevInfo[i].Id
+			value := otherElevInfo[i]
+			if value.CurrentOrder.Status != -1 && value.CurrentOrder.Status != 0 {
+				if ticker.HasCurrentOrderTimedOut(key) && len(otherElevInfo) != 0 {
+
+					fmt.Println("Timer interrupt")
+
+					var floor = value.CurrentOrder.Floor
+					var button = value.CurrentOrder.ButtonType
+					SetOrder(floor, button, -2, false, true)
+					time.Sleep(1000 * time.Millisecond) // We have to give the other elevs time to realise that they've timed out
+
+					SetOrder(floor, button, -1, false, true)
 					RemoveElevFromOtherElevInfo(i)
-					ticker.RemoveElevFromelevTickerInfo(i)
-					ticker.RemoveHeartbeat(i)
+					ticker.DeleteElevFromTicker(key)
+					if button != 2 {
+						SetOrder(floor, button, 0, false, true)
+						order := Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
+						newOrderChannel <- order
+					}
 					checkForUnconfirmedOrders(lightsChannel, newOrderChannel)
 					SetDisplayUpdates(true)
+
+				} else if !ticker.IsElevAlive(key) {
+					RemoveElevFromOtherElevInfo(i)
+					ticker.DeleteElevFromTicker(key)
+					checkForUnconfirmedOrders(lightsChannel, newOrderChannel)
+					SetDisplayUpdates(true)
+					fmt.Println("lost elev ", key)
 				}
+			} else {
+				ticker.ResetOrderTicker(key)
 			}
 		}
 	}

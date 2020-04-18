@@ -9,6 +9,7 @@ import (
 	"./fsm"
 	"./logmanagement"
 	"./orderhandler"
+	"./ticker"
 )
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -27,7 +28,7 @@ const heartbeatThreshold = 4
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 func main() {
-	id, addr := setParameters() //Function to take in parameters from user
+	id, addr := setParameters() // Function to take in parameters from user
 
 	fsmChannels := fsm.FsmChannels{
 		ButtonPress:    make(chan elevio.ButtonEvent),
@@ -46,7 +47,7 @@ func main() {
 	fsm.InitFSM(id, addr)
 	logmanagement.InitLogManagement(id)
 	orderhandler.ReadCabOrderBackup(fsmChannels.ToggleLights, fsmChannels.NewOrder)
-	logmanagement.StartTicker(tickRate, tickThreshold, heartbeatThreshold, fsmChannels.ToggleLights, fsmChannels.NewOrder)
+	ticker.StartTicker(tickRate, heartbeatThreshold, tickThreshold)
 
 	go fsm.RunElevator(fsmChannels)
 	go logmanagement.Communication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder, fsmChannels.Reset)
