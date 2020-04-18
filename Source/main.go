@@ -18,9 +18,9 @@ import (
 
 //numFloors is declared in Logmanagement
 //numButtons is declard in Logmangagement
-const port = 20009     // address for network, do not change
-const timerLength = 5  //seconds
-const tickTreshold = 3 //number of tick needed to generate an interupt
+const port = 20009      // address for network, do not change
+const timerLength = 2   //seconds
+const tickTreshold = 10 //number of tick needed to generate an interupt
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

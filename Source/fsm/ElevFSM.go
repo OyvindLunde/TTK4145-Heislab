@@ -138,7 +138,7 @@ func RunElevator(channels FsmChannels) {
 	}
 }
 
-func ResetElev(channels FsmChannels) {
+/*func ResetElev(channels FsmChannels) {
 	for {
 		time.Sleep(20 * time.Millisecond)
 		select {
@@ -157,4 +157,4 @@ func ResetElev(channels FsmChannels) {
 		}
 
 	}
-}
+}*/
