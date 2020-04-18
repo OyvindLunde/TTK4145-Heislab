@@ -32,6 +32,15 @@ type Order struct {
 	Confirm    bool
 }
 
+type OrderStatus int
+
+const (
+	OrderTimeout OrderStatus = -2
+	Inactive                 = -1
+	Pending                  = 0
+	Active                   = 1
+)
+
 type Elev struct {
 	Id           int
 	Floor        int
@@ -120,29 +129,6 @@ func SetDisplayUpdates(value bool) {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // Used for Display: Checks for changes from other elevators
-func checkForRemoteUpdates(msg Elev) bool {
-	for i := 0; i < len(otherElevInfo); i++ {
-		if msg.Id == otherElevInfo[i].Id {
-			if msg.Floor != otherElevInfo[i].Floor {
-				return true
-			}
-			if msg.State != otherElevInfo[i].State {
-				return true
-			}
-			if msg.CurrentOrder != otherElevInfo[i].CurrentOrder {
-				return true
-			}
-			for j := 0; j < numFloors; j++ {
-				for k := 0; k < numButtons; k++ {
-					if msg.Orders[j][k] != otherElevInfo[i].Orders[j][k] {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
 
 func UpdateMyElevInfo(floor int, order Order, state int) {
 	myElevInfo.Floor = floor
@@ -227,6 +213,30 @@ func ShouldIReset(msg Elev) bool {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Private functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+func checkForRemoteUpdates(msg Elev) bool {
+	for i := 0; i < len(otherElevInfo); i++ {
+		if msg.Id == otherElevInfo[i].Id {
+			if msg.Floor != otherElevInfo[i].Floor {
+				return true
+			}
+			if msg.State != otherElevInfo[i].State {
+				return true
+			}
+			if msg.CurrentOrder != otherElevInfo[i].CurrentOrder {
+				return true
+			}
+			for j := 0; j < numFloors; j++ {
+				for k := 0; k < numButtons; k++ {
+					if msg.Orders[j][k] != otherElevInfo[i].Orders[j][k] {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
 
 func checkForUnconfirmedOrders(lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	orderList := myElevInfo.Orders
