@@ -8,17 +8,35 @@ Jens E Walmsness        jensemil97@gmail.com     Software Engineer @ Sanntid Sup
 ```
 
 # Elevator project
-**Software for controlling n elevators with m floors** Evt kort intro
+
+## Project description
+
+**Software for controlling `n` elevators working in parallel across `m` floors.**
+
 
 - Video av kjørende system med display 
 
-## System requirements
-- Add requirements
-- Linux/ubuntu
-- Simulator v2
-- Husk display package
+## Usage
+**Prerequisites for running the program**
+- Go
+- Linux/Ubuntu
+- Elevator simulator  - https://github.com/TTK4145/Simulator-v2
+- Package for Display module - https://github.com/golang/exp/tree/master/shiny/driver
 
-## Project description
+**Adding and running elevators**  
+For each elevator do the following steps.
+
+1. Open a terminal and run SimElevatorServer, specify a 5 digit port  
+   `./SimElevatorServer --port xxxxx`
+2. Open another terminal and run main.go  
+   `go run main.go`
+3. Enter an ID for the elevator and set the adress equal to the port specified in SimElevatorServer  
+   `Enter Id: x`  
+   `Enter Address: xxxxx`  
+   
+**NOTE:** Each elevator has to have a unique ID and port/address.  
+
+Hotkeys for controlling the elevator can be found at https://github.com/TTK4145/Simulator-v2
 
 ## Content (evt annet navn)
 - Brief explanation of our system, its modules and how they are connected
