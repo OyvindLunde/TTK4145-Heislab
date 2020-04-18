@@ -13,12 +13,14 @@ Jens E Walmsness        jensemil97@gmail.com     Software Engineer @ Sanntid Sup
 **Create software for controlling `n` elevators working in parallel across `m` floors.**  
 We were free to implement our solution however we wanted, but there were some system requirements which had to be fulfilled:
 
-  - **No orders are lost** 
-  - **Multiple elevators should be more efficient than one** 
-  - **An Inidividual elevator should behave sensibly and efficiently**
-  - **The lights should function as expected**
-  
-Additionally there were some behaviour left unspecified which we solved excellently.
+  - **No orders are lost**  
+     Once the light on a hall call button is turned on, an elevator should arrive at that floor.
+  - **Multiple elevators should be more efficient than one**  
+     Similarly for a cab call, but only the elevator at that specific workspace should take the order.
+  - **An Inidividual elevator should behave sensibly and efficiently**  
+     This means handling network packet loss, losing network connection entirely, software that crashes, and losing power - both to the elevator motor and the machine that controls the elevator.
+  - **The lights should function as expected**  
+     If the elevator is disconnected from the network, it should still serve all the currently active orders (ie. whatever lights are showing)
 
 ## Usage
 **Prerequisites for running the program**
