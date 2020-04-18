@@ -98,7 +98,6 @@ func update(w screen.EventDeque) {
 			logmanagement.SetDisplayUpdates(false)
 		}
 	}
-
 }
 
 func displayOtherElevators(w screen.Window, s screen.Screen, elevStatic []screen.Texture, elevList []logmanagement.Elev, arrow screen.Texture) {

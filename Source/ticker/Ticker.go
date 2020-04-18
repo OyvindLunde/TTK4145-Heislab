@@ -5,30 +5,37 @@ package ticker
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
-	"fmt"
+	"sync"
 	"time"
-
-	"../elevio"
-	"../logmanagement"
-	"../orderhandler"
 )
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Variables
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
+var heartbeatThreshold int
+var currentOrderThres int
+
 var done chan bool
 var ticker *time.Ticker
+
+var orderTicker map[int]int //Keeps track of how long an order has been active
+var heartbeat map[int]int   //Keeps track of how long its been since last we heard from an elevator
+var _mtx sync.Mutex
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 /*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func StartTicker(tickLength time.Duration, tickTreshold int, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
+func StartTicker(tickLength time.Duration, heartBeatThreshold int, currentOrderThreshold int) {
+	currentOrderThres = currentOrderThreshold
+	heartbeatThreshold = heartBeatThreshold
 	done = make(chan bool)
 	ticker = time.NewTicker(tickLength * time.Second)
-	go checkOnOtherElevs(tickTreshold, lightsChannel, newOrderChannel)
-
+	orderTicker = make(map[int]int)
+	heartbeat = make(map[int]int)
+	_mtx = sync.Mutex{}
+	go elevTicker()
 }
 
 /*Stops ticker*/
@@ -38,47 +45,65 @@ func StoppTicker() {
 
 }
 
+func ResetOrderTicker(id int) {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	orderTicker[id] = 0
+}
+
+func AddElevToTicker(id int) {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	heartbeat[id] = 0
+	orderTicker[id] = 0
+}
+
+func DeleteElevFromTicker(id int) {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	delete(heartbeat, id)
+	delete(orderTicker, id)
+}
+
+func ResetHeartBeat(id int) {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	heartbeat[id] = 0
+}
+
+func IsElevAlive(id int) bool {
+	return heartbeat[id] < heartbeatThreshold
+}
+
+func HasCurrentOrderTimedOut(id int) bool {
+	return orderTicker[id] > currentOrderThres
+}
+
+func ClearElevTickerInfo() {
+	for key, _ := range heartbeat {
+		DeleteElevFromTicker(key)
+	}
+}
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Private functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*checks if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func checkOnOtherElevs(tickTreshold int, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
+func elevTicker() {
 	for {
 		select {
 		case <-done:
 			return
 		case <-ticker.C:
-			logmanagement.IncrementHeartBeat()
-			for i := 0; i < len(logmanagement.GetElevTickerInfo()); i++ {
+			_mtx.Lock()
 
-				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0 {
-					logmanagement.IncrementElevTickerInfo(i)
-					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold && len(logmanagement.GetElevTickerInfo()) != 0 {
-						fmt.Println("Timer interrupt")
-						var floor = logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor
-						var button = logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType
-						logmanagement.SetOrder(floor, button, -2, false, true)
-						time.Sleep(3000 * time.Millisecond)
-						fmt.Println("Done sleeping")
-						logmanagement.SetOrder(floor, button, -1, false, true)
-						logmanagement.RemoveElevFromOtherElevInfo(i)
-						logmanagement.RemoveElevFromelevTickerInfo(i)
-						logmanagement.RemoveHeartbeat(i)
-						if button != 2 {
-							logmanagement.SetOrder(floor, button, 0, false, true)
-							order := logmanagement.Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
-							newOrderChannel <- order
-						}
-						orderhandler.CheckForUnconfirmedOrders(lightsChannel, newOrderChannel)
-					}
-				} else if logmanagement.GetHeartBeat(i) > 1 { //burde være dynamisk
-					logmanagement.RemoveElevFromOtherElevInfo(i)
-					logmanagement.RemoveElevFromelevTickerInfo(i)
-					logmanagement.RemoveHeartbeat(i)
-					orderhandler.CheckForUnconfirmedOrders(lightsChannel, newOrderChannel)
-				}
+			for key, _ := range heartbeat {
+				heartbeat[key]++
+				orderTicker[key]++
 			}
+			_mtx.Unlock()
+
 		}
 	}
 }

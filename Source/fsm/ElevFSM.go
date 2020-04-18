@@ -1,7 +1,7 @@
 package fsm
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-// This Module contain functions for executing this elevators orders
+// Elevator Finite State Machine
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
@@ -16,6 +16,8 @@ import (
 
 var address int
 var _id int
+
+//var state int
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Structs and enums
@@ -44,41 +46,36 @@ type FsmChannels struct {
 // Init and FSM
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-var state int
-
 func InitFSM(id int, addr int) {
 	_id = id
 	address = addr
 	elevcontroller.InitializeElevator(logmanagement.GetNumFloors(), addr)
+	fmt.Println("FSM Initialized")
 }
 
 /*Elevator FSM*/
 func RunElevator(channels FsmChannels) {
-	fmt.Println("AutoHeis assemble")
 	floor := 0
-	state = IDLE
+	state := IDLE
 	NoOrder := logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
 	currentOrder := NoOrder
 
-	go elevio.PollButtons(channels.ButtonPress) // Kan vi legge denne inn i HandleButtonEvents?
+	go elevio.PollButtons(channels.ButtonPress)
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go orderhandler.HandleButtonEvents(channels.ButtonPress, channels.ToggleLights, channels.NewOrder)
-	go orderhandler.UpdateLightsV2(channels.ToggleLights)
+	go orderhandler.UpdateLights(channels.ToggleLights)
 
 	for {
 		time.Sleep(20 * time.Millisecond)
 		switch state {
 		case IDLE:
-			fmt.Println("In IDLE")
 			select {
 			case currentOrder = <-channels.NewOrder:
 				if orderhandler.IsOrderValid(currentOrder) {
-					fmt.Println("Order Valid")
 					currentOrder.Status = logmanagement.GetMyElevInfo().Id
 					logmanagement.SetMyElevInfo(floor, currentOrder, state)
 					if orderhandler.ShouldITakeOrder(currentOrder) {
-						fmt.Println("Taking order")
-						orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.GetMyElevInfo().Id, false, true)
+						orderhandler.UpdateOrder(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.GetMyElevInfo().Id, false, true)
 						channels.MotorDirection <- orderhandler.GetDirection(floor, currentOrder.Floor)
 						state = EXECUTE
 						logmanagement.SetMyElevInfo(floor, currentOrder, state)
@@ -89,7 +86,6 @@ func RunElevator(channels FsmChannels) {
 			}
 
 		case EXECUTE:
-			fmt.Println("In EXECUTE")
 			select {
 			case dir := <-channels.MotorDirection:
 				elevio.SetMotorDirection(elevio.MotorDirection(dir))
@@ -99,16 +95,16 @@ func RunElevator(channels FsmChannels) {
 					logmanagement.SetMyElevInfo(floor, NoOrder, state)
 				}
 
-			case floor = <-channels.FloorReached: //annet navn enn "a"?
+			case floor = <-channels.FloorReached:
 				logmanagement.SetMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
-				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.GetMyElevInfo(), logmanagement.GetOtherElevInfo()) {
+				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor) {
 					orderhandler.StopAtFloor(floor, channels.ToggleLights)
 					dir := orderhandler.GetDirection(floor, currentOrder.Floor)
 					if dir == 0 {
 						state = IDLE
 						logmanagement.SetMyElevInfo(floor, NoOrder, state)
-						for len(channels.MotorDirection) > 0 {
+						for len(channels.MotorDirection) > 0 { // Emptying MotorDirection channel
 							<-channels.MotorDirection
 						}
 					} else {
@@ -120,8 +116,8 @@ func RunElevator(channels FsmChannels) {
 			}
 
 		case RESET:
-			elevcontroller.InitializeElevator(logmanagement.GetNumFloors(), address)
 			logmanagement.InitLogManagement(_id)
+			elevcontroller.InitializeElevator(logmanagement.GetNumFloors(), address)
 			orderhandler.ReadCabOrderBackup(channels.ToggleLights, channels.NewOrder)
 			floor = 0
 			state = IDLE
@@ -129,24 +125,3 @@ func RunElevator(channels FsmChannels) {
 		}
 	}
 }
-
-/*func ResetElev(channels FsmChannels) {
-	for {
-		time.Sleep(20 * time.Millisecond)
-		select {
-		case <-channels.Reset:
-			fmt.Println("starts reset")
-			state = INIT
-			elevio.SetMotorDirection(elevio.MD_Down)
-			for elevio.GetFloor() != 0 { //Fix getFloor problemet
-			}
-			elevio.SetMotorDirection(elevio.MD_Stop)
-			logmanagement.InitLogManagement(_id)
-			orderhandler.ReadCabOrderBackup(channels.ToggleLights, channels.NewOrder)
-			state = IDLE
-			logmanagement.SetMyElevInfo(0, logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}, state)
-			fmt.Println("done resetting")
-		}
-
-	}
-}*/

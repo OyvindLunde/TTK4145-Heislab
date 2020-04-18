@@ -16,17 +16,19 @@ import (
 // Variables
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-//numFloors is declared in Logmanagement
-//numButtons is declard in Logmangagement
-const port = 20009      // address for network, do not change
-const timerLength = 2   //seconds
-const tickTreshold = 10 //number of tick needed to generate an interupt
+// numFloors is declared in Logmanagement
+// numButtons is declard in Logmangagement
+const port = 20009       // address for network, do not change
+const tickRate = 2       // seconds per tick
+const tickThreshold = 10 // number of ticks needed to generate an interrupt
+const heartbeatThreshold = 4
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 func main() {
-	id, addr := setParameters() //Function to take in parameters from user
+	id, addr := setParameters() // Function to take in parameters from user
 
 	fsmChannels := fsm.FsmChannels{
 		ButtonPress:    make(chan elevio.ButtonEvent),
@@ -45,10 +47,10 @@ func main() {
 	fsm.InitFSM(id, addr)
 	logmanagement.InitLogManagement(id)
 	orderhandler.ReadCabOrderBackup(fsmChannels.ToggleLights, fsmChannels.NewOrder)
-	ticker.StartTicker(timerLength, tickTreshold, fsmChannels.ToggleLights, fsmChannels.NewOrder)
+	ticker.StartTicker(tickRate, heartbeatThreshold, tickThreshold)
 
 	go fsm.RunElevator(fsmChannels)
-	go logmanagement.InitCommunication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder, fsmChannels.Reset)
+	go logmanagement.Communication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder, fsmChannels.Reset)
 
 	go display.Display()
 
