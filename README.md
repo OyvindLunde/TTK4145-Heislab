@@ -64,19 +64,19 @@ The finite state machine executes the given order, and switches between the diff
 
 
 
-**IDLE:** The elevator is standing still at a floor and is awaiting new orders.
+  - **IDLE:** The elevator is standing still at a floor and is awaiting new orders.
 
-**EXECUTE:** The elevator is currently executing an order.
+  - **EXECUTE:** The elevator is currently executing an order.
 
-**RESET:** The elevator has timed out while executing an order, and needs to be reset.
+  - **RESET:** The elevator has timed out while executing an order, and needs to be reset.
 
-**NewOrder:** The elevator has received a new order, and will check its validity and availability before executing the order.
+  - **NewOrder:** The elevator has received a new order, and will check its validity and availability before executing the order.
 
-**MotorDirection:** The elevator has gotten a new MotorDirection, and will start to run in the given direction.
+  - **MotorDirection:** The elevator has gotten a new MotorDirection, and will start to run in the given direction.
 
-**FloorReached:** The elevator has reached a floor, and will check whether it should stop or not.
+  - **FloorReached:** The elevator has reached a floor, and will check whether it should stop or not.
 
-**OrderTimeout:** If the elevator had taken to long time to finish and order, typically because of motor power loss, an OrderTimeout event is generated to tell the system to reset itself.
+  - **OrderTimeout:** If the elevator had taken to long time to finish and order, typically because of motor power loss, an OrderTimeout event is generated to tell the system to reset itself.
 
 ### OrderHandler
 The OrderHandler module controls all the logic for the elevator, such as deciding if the elevator should take an order, which direction it should go in, and whether or not it should stop when reaching a floor. It also handles incoming orders from button presses. 
@@ -85,7 +85,7 @@ The OrderHandler module controls all the logic for the elevator, such as decidin
 Communication transmits to and receives data from the network, and handles the received information.
 
 ### Network
-The most basic functions for transmitting and receiving data. 
+The most basic functions for transmitting and receiving data.  
 Mainly delivered code, with some changes.
 
 ### LogManagement
@@ -102,5 +102,5 @@ The most low-level functionality for interacting with the hardware.
 Mainly delivered code.
 
 ### Display
-Due to the coronavirus, and one group members light autism, we programmed and implemented a display that showed all connected elevators, as well as their state, orders and other relevant information. This made it much easier to see what was going on when running the system and debug it when errors occured.
+Due to the coronavirus we programmed and implemented a display that showed all connected elevators, as well as their state, orders and other relevant information. This made it much easier to see what was going on when running the system and debug it when errors occured.
 See the README file in the Source/Display folder for a more thourough explanation of this module.
