@@ -7,30 +7,50 @@ Jens E Walmsness        jensemil97@gmail.com     Software Engineer @ Sanntid Sup
 Øyvind R Lunde          oylunrl@gmail.com        Software Engineer @ Sanntid Supersquad
 ```
 
-## Getting Started
+# Elevator project
+**Software for controlling n elevators with m floors** Evt kort intro
 
-This Development Project aims to showcase error handling in controlling multiple elevators
+- Video av kjørende system med display 
 
-### Prerequisites
+## System requirements
+- Add requirements
+- Linux/ubuntu
+- Simulator v2
+- Husk display package
 
-To use this software to its full potential, you require:
+## Project description
 
-* GO
-* Linux
-* An elevator
-
-### Legge til i PATH:
-- Gå til Home og trykk ctrl+H for å vise hidden files
-- Åpne .bashrc og legg til export PATH=$PATH:/path/to/your/file. Lagre.
-- Skriv "source ~/.bashrc" for å oppdatere PATH
-- Good to go
+## Content (evt annet navn)
+- Brief explanation of our system, its modules and how they are connected
 
 
-### Kjøre heisen - Hardware, Single State Mode
-- Åpne terminal og kjør "ElevatorServer"
-- Åpne en ny terminal, naviger til riktig mappe og skriv "go run main.go"
-- Good to go
+### Elevator FSM
 
-```
+The finite state machine has 3 states and 3 events:
 
-Now, you can locate and open the project through File Explorer.
+| States        | Events            |
+|:-------------:|:-----------------:|
+| IDLE          | NewOrder          |
+| EXECUTE       | MotorDirection    |
+| RESET         | FloorReached      |
+|               | OrderTimeout      |
+
+
+
+**IDLE:** The elevator is standing still at a floor and is awaiting new orders.
+
+**EXECUTE:** The elevator is currently executing an order.
+
+**RESET:** The elevator has timed out whle executing an order, and needs to be reset.
+
+**NewOrder:** The elevator has received a new order, and will check its validity and availability before executing the order.
+
+**MotorDirection:** The elevator has gotten a new MotorDirection, and will start to run in the given direction.
+
+**FloorReached:** The elevator has reached a floor, and will check whether it should stop or not.
+
+**OrderTimeout**
+
+
+## Display
+
