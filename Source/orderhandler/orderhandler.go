@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+
 	//"reflect"
 	"strconv"
 	"strings"
@@ -60,15 +61,16 @@ func ShouldElevatorStop(currentfloor int, destination int, elev logmanagement.El
 
 /*Stops elevator and updates LocalOrders acording to floor in param*/
 func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
-	for i := 0; i < logmanagement.GetNumButtons(); i++ { 
+	for i := 0; i < logmanagement.GetNumButtons(); i++ {
 		status := int(logmanagement.GetOrder(floor, i).Status)
-		if status != -1 {
+		if status == 0 || status == logmanagement.GetMyElevInfo().Id {
 			UpdateLocalOrders(floor, i, status, true, false)
 		}
 	} // Nye ordrer i samme etg som kommer inn mens dørene er åpne: Rekker vi å sende at de ordrene er fullført?
 	elevcontroller.ElevStopAtFloor(floor)
 	for i := 0; i < 3; i++ { // Ta inn numButtons ??ddd
-		if logmanagement.GetOrder(floor, i).Status != -1 {
+		status := int(logmanagement.GetOrder(floor, i).Status)
+		if status == 0 || status == logmanagement.GetMyElevInfo().Id {
 			UpdateLocalOrders(floor, i, -1, false, false)
 			light := elevio.PanelLight{Floor: floor, Button: elevio.ButtonType(i), Value: false}
 			lightsChannel <- light
@@ -85,7 +87,6 @@ func HandleButtonEvents(ButtonPress chan elevio.ButtonEvent, lightsChannel chan<
 			order := logmanagement.GetOrder(a.Floor, int(a.Button))
 			if order.Status == -1 {
 				UpdateLocalOrders(order.Floor, int(order.ButtonType), 0, false, false)
-				
 
 				if order.ButtonType == 2 || len(logmanagement.GetOtherElevInfo()) == 0 { // Update lights and newOrder only for CAB orders and for single elev state
 					light := elevio.PanelLight{Floor: a.Floor, Button: a.Button, Value: true}
@@ -129,7 +130,6 @@ func CheckForUnconfirmedOrders(lightsChannel chan<- elevio.PanelLight, newOrderC
 		}
 	}
 }
-
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Cost Function
@@ -256,7 +256,7 @@ func ReadCabOrderBackup(lightsChannel chan<- elevio.PanelLight, newOrderChannel 
 			newOrderChannel <- order
 		}
 	}*/
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 
 }
 

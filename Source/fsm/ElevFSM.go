@@ -50,7 +50,6 @@ func InitFSM(id int, addr int) {
 	_id = id
 	address = addr
 	elevcontroller.InitializeElevator(logmanagement.GetNumFloors(), addr)
-	elevio.SetFloorIndicator(0)
 }
 
 /*Elevator FSM*/
@@ -65,7 +64,6 @@ func RunElevator(channels FsmChannels) {
 	go elevio.PollFloorSensor(channels.FloorReached)
 	go orderhandler.HandleButtonEvents(channels.ButtonPress, channels.ToggleLights, channels.NewOrder)
 	go orderhandler.UpdateLightsV2(channels.ToggleLights)
-	//go ResetElev(channels)
 
 	for {
 		time.Sleep(20 * time.Millisecond)
@@ -101,8 +99,7 @@ func RunElevator(channels FsmChannels) {
 					logmanagement.SetMyElevInfo(floor, NoOrder, state)
 				}
 
-			case a := <-channels.FloorReached: //annet navn enn "a"?
-				floor = a
+			case floor = <-channels.FloorReached: //annet navn enn "a"?
 				logmanagement.SetMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
 				if orderhandler.ShouldElevatorStop(floor, currentOrder.Floor, logmanagement.GetMyElevInfo(), logmanagement.GetOtherElevInfo()) {
@@ -119,22 +116,17 @@ func RunElevator(channels FsmChannels) {
 					}
 				}
 			case <-channels.Reset:
-				fmt.Println("starts reset")
 				state = RESET
 			}
 
 		case RESET:
-			elevio.SetMotorDirection(elevio.MD_Down)
-			for elevio.GetFloor() != 0 { //Fix getFloor problemet
-			}
-			elevio.SetMotorDirection(elevio.MD_Stop)
+			elevcontroller.InitializeElevator(logmanagement.GetNumFloors(), address)
 			logmanagement.InitLogManagement(_id)
 			orderhandler.ReadCabOrderBackup(channels.ToggleLights, channels.NewOrder)
+			floor = 0
 			state = IDLE
-			logmanagement.SetMyElevInfo(0, logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}, state)
-			fmt.Println("done resetting")
+			logmanagement.SetMyElevInfo(floor, NoOrder, state)
 		}
-
 	}
 }
 

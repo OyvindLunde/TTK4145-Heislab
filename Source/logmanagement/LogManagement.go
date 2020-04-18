@@ -267,13 +267,9 @@ func updateOtherElevInfo(msg Elev) {
 func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
-			if myElevInfo.Orders[i][j].Status == -2 {
-				newOrderChannel <- Order{Floor: i, ButtonType: j, Status: 0, Finished: false}
-				myElevInfo.Orders[i][j].Status = 0
-			} else if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 { // Order finished by other elev
+			if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 { // Order finished by other elev
 				//fmt.Println("Case 1: Order finished by other elevator")
 				myElevInfo.Orders[i][j].Status = -1
-				// Replace with finished chan
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: false}
 				lightsChannel <- light
 			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == -1 && msg.Orders[i][j].Finished == false { // New order received

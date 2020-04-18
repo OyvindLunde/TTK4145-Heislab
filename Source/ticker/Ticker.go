@@ -59,7 +59,8 @@ func checkOnOtherElevs(tickTreshold int, lightsChannel chan<- elevio.PanelLight,
 						var floor = logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor
 						var button = logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType
 						logmanagement.SetOrder(floor, button, -2, false, true)
-						time.Sleep(1 * time.Second)
+						time.Sleep(3000 * time.Millisecond)
+						fmt.Println("Done sleeping")
 						logmanagement.SetOrder(floor, button, -1, false, true)
 						logmanagement.RemoveElevFromOtherElevInfo(i)
 						logmanagement.RemoveElevFromelevTickerInfo(i)

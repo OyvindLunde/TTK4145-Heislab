@@ -32,6 +32,7 @@ func InitializeElevator(numFloors int, port int) {
 	for elevio.GetFloor() != 0 { //Fix getFloor problemet
 	}
 	elevio.SetMotorDirection(elevio.MD_Stop)
+	elevio.SetFloorIndicator(0)
 
 	/*ButtonPress = make(chan elevio.ButtonEvent)
 	FloorReached = make(chan int)
