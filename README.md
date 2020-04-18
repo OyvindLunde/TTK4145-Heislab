@@ -10,7 +10,7 @@ Jens E Walmsness        jensemil97@gmail.com     Software Engineer @ Sanntid Sup
 # Elevator project
 **Software for controlling n elevators with m floors** Evt kort intro
 
-![Elevator Recording](Media/ElevatorRecording.mp4)
+![Elevator Recording](Media/ElevatorRecording.gif)
 
 ## System requirements
 - Add requirements
