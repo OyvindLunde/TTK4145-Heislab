@@ -19,6 +19,7 @@ const numButtons = 3
 var myElevInfo Elev
 var otherElevInfo []Elev
 var elevTickerInfo []int
+var heartbeat[]int
 
 var displayUpdates = false // Used to know when to update the display
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -109,6 +110,10 @@ func SetDisplayUpdates(value bool) {
 	displayUpdates = value
 }
 
+func GetHeartBeat(i int)int{
+	return heartbeat[i]
+}
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Init functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -134,6 +139,20 @@ func InitCommunication(port int, channels NetworkChannels, toggleLights chan ele
 
 func IncrementElevTickerInfo(elev int) {
 	elevTickerInfo[elev] += 1
+}
+
+func ResetElevTickerInfo(elev int){
+	elevTickerInfo[elev] = 0
+}
+
+func IncrementHeartBeat(){
+	for i :=0; i < len(heartbeat); i++ {
+		heartbeat[i]++
+	}
+}
+
+func ResetHeartBeat(i int){
+	heartbeat[i] = 0
 }
 
 /*Sends MyElevInfo on channel in parameter*/
@@ -196,6 +215,22 @@ func UpdateMyElevInfo(floor int, order Order, state int) {
 	displayUpdates = true
 }
 
+func RemoveElevFromOtherElevInfo(i int){
+	copy(otherElevInfo[i:], otherElevInfo[i+1:]) // Shift a[i+1:] left one index.
+	otherElevInfo = otherElevInfo[:len(otherElevInfo)-1]     // Truncate slice.
+}
+
+func RemoveElevFromelevTickerInfo(i int){
+	copy(elevTickerInfo[i:], elevTickerInfo[i+1:]) // Shift a[i+1:] left one index.
+	elevTickerInfo = elevTickerInfo[:len(elevTickerInfo)-1]     // Truncate slice.
+}
+
+func RemoveHeartbeat(i int){
+	copy(heartbeat[i:], heartbeat[i+1:]) // Shift a[i+1:] left one index.
+	heartbeat = heartbeat[:len(heartbeat)-1]     // Truncate slice.
+}
+
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Private functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -205,6 +240,7 @@ func updateOtherElevInfo(msg Elev) {
 	bool1 := checkForUpdates(msg)
 	for i := 0; i < len(otherElevInfo); i++ {
 		if msg.Id == otherElevInfo[i].Id {
+			heartbeat[i] = 0
 			if otherElevInfo[i].CurrentOrder != msg.CurrentOrder {
 				elevTickerInfo[i] = 0
 			}
@@ -225,6 +261,7 @@ func updateOtherElevInfo(msg Elev) {
 	}
 	elevTickerInfo = append(elevTickerInfo, 0)
 	otherElevInfo = append(otherElevInfo, msg)
+	heartbeat = append(heartbeat,0)
 	displayUpdates = true
 }
 
@@ -232,7 +269,10 @@ func updateOtherElevInfo(msg Elev) {
 func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons-1; j++ {
-			if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 { // Order finished by other elev
+			if myElevInfo.Orders[i][j].Status == -2 {
+				newOrderChannel <- Order{Floor: i, ButtonType: j, Status: 0, Finished: false}
+				myElevInfo.Orders[i][j].Status = 0
+			} else if msg.Orders[i][j].Finished == true && myElevInfo.Orders[i][j].Status != -1 { // Order finished by other elev
 				//fmt.Println("Case 1: Order finished by other elevator")
 				myElevInfo.Orders[i][j].Status = -1
 				// Replace with finished chan
@@ -249,9 +289,6 @@ func updateOrderList(msg Elev, lightsChannel chan<- elevio.PanelLight, newOrderC
 				myElevInfo.Orders[i][j].Status = msg.Id
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
 				lightsChannel <- light
-			} else if myElevInfo.Orders[i][j].Status == -2 {
-				newOrderChannel <- Order{Floor: i, ButtonType: j, Status: 0, Finished: false}
-				myElevInfo.Orders[i][j].Status = 0
 			} else if msg.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Status == 0 && myElevInfo.Orders[i][j].Confirm == false { // Order confirmed by other elev
 				myElevInfo.Orders[i][j].Confirm = true
 				light := elevio.PanelLight{Floor: i, Button: elevio.ButtonType(j), Value: true}
@@ -287,12 +324,16 @@ func checkForReset(msg Elev) bool{
 	if orderFloor != -1 && orderButton != -1{
 		if msg.Orders[orderFloor][orderButton].Status == -2{
 			myElevInfo.State = -2
+			otherElevInfo = otherElevInfo[:0]
+			elevTickerInfo = elevTickerInfo[:0]
 			fmt.Println("resetting")
 			return true
 		} 
 	}
 	return false
 }
+
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Dev functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -65,17 +65,21 @@ func RunElevator(channels FsmChannels) {
 	go orderhandler.HandleButtonEvents(channels.ButtonPress, channels.ToggleLights, channels.NewOrder)
 	go orderhandler.UpdateLightsV2(channels.ToggleLights)
 	go ResetElev(channels)
+	
 
 	for {
 		time.Sleep(20 * time.Millisecond)
 		switch state {
 		case IDLE:
+			fmt.Println("In: Idle")
 			select {
 			case currentOrder = <-channels.NewOrder:
 				if orderhandler.IsOrderValid(currentOrder) {
+					fmt.Println(currentOrder)
 					currentOrder.Status = logmanagement.GetMyElevInfo().Id
 					logmanagement.SetMyElevInfo(floor, currentOrder, state)
 					if orderhandler.ShouldITakeOrder(currentOrder) {
+						fmt.Println("Order valid")
 						orderhandler.UpdateLocalOrders(currentOrder.Floor, int(currentOrder.ButtonType), logmanagement.GetMyElevInfo().Id, false, true)
 						channels.MotorDirection <- orderhandler.GetDirection(floor, currentOrder.Floor)
 						state = EXECUTE
@@ -89,6 +93,8 @@ func RunElevator(channels FsmChannels) {
 		case EXECUTE:
 			select {
 			case dir := <-channels.MotorDirection:
+				fmt.Println("In EXE - DIR")
+				fmt.Println(dir)
 				elevio.SetMotorDirection(elevio.MotorDirection(dir))
 				if dir == 0 {
 					orderhandler.StopAtFloor(floor, channels.ToggleLights)
@@ -97,6 +103,7 @@ func RunElevator(channels FsmChannels) {
 				}
 
 			case a := <-channels.FloorReached: //annet navn enn "a"?
+				fmt.Println("In EXE - FloorReached")
 				floor = a
 				logmanagement.SetMyElevInfo(floor, currentOrder, state)
 				elevio.SetFloorIndicator(floor)
@@ -106,6 +113,9 @@ func RunElevator(channels FsmChannels) {
 					if dir == 0 {
 						state = IDLE
 						logmanagement.SetMyElevInfo(floor, NoOrder, state)
+						for len(channels.MotorDirection) > 0 {
+							<-channels.MotorDirection
+						}
 					} else {
 						channels.MotorDirection <- dir
 					}
@@ -121,13 +131,20 @@ func ResetElev(channels FsmChannels){
 		time.Sleep(20 * time.Millisecond)
 		select{
 		case  <- channels.Reset:
+			fmt.Println("starts reset")
+			state = INIT
 			elevio.SetMotorDirection(elevio.MD_Down)
 			for elevio.GetFloor() != 0 { //Fix getFloor problemet
+				if elevio.GetFloor() != -1 {
+					fmt.Println(elevio.GetFloor())
+				}
 			}
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			logmanagement.InitLogManagement(_id)
 			orderhandler.ReadCabOrderBackup(channels.ToggleLights, channels.NewOrder)
 			state = IDLE
+			logmanagement.SetMyElevInfo(0,logmanagement.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}, state)
+			fmt.Println("done reseting")
 		}
 			
 	}
