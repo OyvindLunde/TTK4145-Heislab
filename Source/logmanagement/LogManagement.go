@@ -55,7 +55,7 @@ type Elev struct {
 
 func InitLogManagement(id int, toggleLights chan elevio.PanelLight, newOrderChannel chan Order) {
 	initializeMyElevInfo(id)
-	go checkOnOtherElevs(toggleLights, newOrderChannel)
+	go checkForTimeout(toggleLights, newOrderChannel)
 }
 
 func initializeMyElevInfo(id int) {
@@ -127,8 +127,6 @@ func SetDisplayUpdates(value bool) {
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// Used for Display: Checks for changes from other elevators
 
 func UpdateMyElevInfo(floor int, order Order, state int) {
 	myElevInfo.Floor = floor
@@ -214,6 +212,7 @@ func ShouldIReset(msg Elev) bool {
 // Private functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
+// Used for Display: Checks for changes from other elevators
 func checkForRemoteUpdates(msg Elev) bool {
 	for i := 0; i < len(otherElevInfo); i++ {
 		if msg.Id == otherElevInfo[i].Id {
@@ -252,7 +251,7 @@ func checkForUnconfirmedOrders(lightsChannel chan<- elevio.PanelLight, newOrderC
 	}
 }
 
-func checkOnOtherElevs(lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
+func checkForTimeout(lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for {
 		time.Sleep(500 * time.Millisecond)
 		for i := 0; i < len(otherElevInfo); i++ {
