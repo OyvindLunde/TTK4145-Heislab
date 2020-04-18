@@ -10,11 +10,15 @@ Jens E Walmsness        jensemil97@gmail.com     Software Engineer @ Sanntid Sup
 # Elevator project
 
 ## Project description
+**Create software for controlling `n` elevators working in parallel across `m` floors.**  
+We were free to implement our solution however we wanted, but there were some system requirements which had to be fulfilled:
 
-**Software for controlling `n` elevators working in parallel across `m` floors.**
-
-
-- Video av kjørende system med display 
+  - **No orders are lost** 
+  - **Multiple elevators should be more efficient than one** 
+  - **An Inidividual elevator should behave sensibly and efficiently**
+  - **The lights should function as expected**
+  
+Additionally there were some behaviour left unspecified which we solved excellently.
 
 ## Usage
 **Prerequisites for running the program**
@@ -44,7 +48,7 @@ Hotkeys for controlling the elevator can be found at https://github.com/TTK4145/
 
 ### Elevator FSM
 
-The finite state machine has 3 states and 3 events:
+The finite state machine has 3 states with 4 events:
 
 | States        | Events            |
 |:-------------:|:-----------------:|
