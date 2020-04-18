@@ -5,80 +5,67 @@ package ticker
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 import (
-	"fmt"
 	"time"
-
-	"../elevio"
-	"../logmanagement"
-	"../orderhandler"
 )
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Variables
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-var done chan bool
-var ticker *time.Ticker
+var Done chan bool
+var Ticker *time.Ticker
+
+var elevTickerInfo []int
+var heartbeat []int
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-/*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func StartTicker(tickLength time.Duration, tickTreshold int, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
-	done = make(chan bool)
-	ticker = time.NewTicker(tickLength * time.Second)
-	go checkOnOtherElevs(tickTreshold, lightsChannel, newOrderChannel)
 
+func GetElevTickerInfo() []int { // Move/Delete
+	return elevTickerInfo
 }
 
-/*Stops ticker*/
-func StoppTicker() {
-	ticker.Stop()
-	done <- true
-
+func IncrementElevTickerInfo(elev int) {
+	elevTickerInfo[elev] += 1
 }
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------------
-// Private functions
-// ------------------------------------------------------------------------------------------------------------------------------------------------------
+func ResetElevTickerInfo(elev int) {
+	elevTickerInfo[elev] = 0
+}
 
-/*checks if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func checkOnOtherElevs(tickTreshold int, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			logmanagement.IncrementHeartBeat()
-			for i := 0; i < len(logmanagement.GetElevTickerInfo()); i++ {
+func ClearElevTickerInfo() {
+	elevTickerInfo = elevTickerInfo[:0]
+}
 
-				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0 {
-					logmanagement.IncrementElevTickerInfo(i)
-					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold && len(logmanagement.GetElevTickerInfo()) != 0 {
-						fmt.Println("Timer interrupt")
-						var floor = logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor
-						var button = logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType
-						logmanagement.SetOrder(floor, button, -2, false, true)
-						time.Sleep(3000 * time.Millisecond)
-						fmt.Println("Done sleeping")
-						logmanagement.SetOrder(floor, button, -1, false, true)
-						logmanagement.RemoveElevFromOtherElevInfo(i)
-						logmanagement.RemoveElevFromelevTickerInfo(i)
-						logmanagement.RemoveHeartbeat(i)
-						if button != 2 {
-							logmanagement.SetOrder(floor, button, 0, false, true)
-							order := logmanagement.Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
-							newOrderChannel <- order
-						}
-						orderhandler.CheckForUnconfirmedOrders(lightsChannel, newOrderChannel)
-					}
-				} else if logmanagement.GetHeartBeat(i) > 1 { //burde være dynamisk
-					logmanagement.RemoveElevFromOtherElevInfo(i)
-					logmanagement.RemoveElevFromelevTickerInfo(i)
-					logmanagement.RemoveHeartbeat(i)
-					orderhandler.CheckForUnconfirmedOrders(lightsChannel, newOrderChannel)
-				}
-			}
-		}
+func AppendToElevTickerInfo() {
+	elevTickerInfo = append(elevTickerInfo, 0)
+}
+
+func RemoveElevFromelevTickerInfo(i int) {
+	copy(elevTickerInfo[i:], elevTickerInfo[i+1:])          // Shift a[i+1:] left one index.
+	elevTickerInfo = elevTickerInfo[:len(elevTickerInfo)-1] // Truncate slice.
+}
+
+func GetHeartBeat(index int) int {
+	return heartbeat[index]
+}
+
+func IncrementHeartBeat() {
+	for i := 0; i < len(heartbeat); i++ {
+		heartbeat[i]++
 	}
+}
+
+func ResetHeartBeat(i int) {
+	heartbeat[i] = 0
+}
+
+func AppendToHeartBeat() {
+	heartbeat = append(heartbeat, 0)
+}
+
+func RemoveHeartbeat(i int) {
+	copy(heartbeat[i:], heartbeat[i+1:])     // Shift a[i+1:] left one index.
+	heartbeat = heartbeat[:len(heartbeat)-1] // Truncate slice.
 }

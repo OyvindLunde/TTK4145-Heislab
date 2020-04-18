@@ -27,3 +27,9 @@ Spør studass om:
 - La til checkForUpdates() for å også oppdatere displayet når en annen heis (from network) har endringer. Økte poll rate på updates() i Display.go til 100msek for å passe på at Displayet ikke kræsjer. Kræsjer fortsatt vel full spam thou, må fikse Release() ?
 - Endret displayet til å ha "passe" størrelse ved oppstart 
 
+
+
+Kom tilbake til orderHandler: StopAtFloor()
+Gjøre om status (og mer?) til enum/struct
+Slett sleep i caborderbackup hvis good
+Se over InitMyElevInfo()
