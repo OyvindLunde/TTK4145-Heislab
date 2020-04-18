@@ -19,7 +19,7 @@ const numButtons = 3
 var myElevInfo Elev
 var otherElevInfo []Elev
 var elevTickerInfo []int
-var heartbeat[]int
+var heartbeat []int
 
 var displayUpdates = false // Used to know when to update the display
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -71,8 +71,8 @@ func GetOtherElevInfo() []Elev {
 	return otherElevInfo
 }
 
-func SetOtherElevInfoState(elev int, state int){
-	otherElevInfo[elev].State =  state
+func SetOtherElevInfoState(elev int, state int) {
+	otherElevInfo[elev].State = state
 }
 
 func GetElevInfo(elev Elev) (id, floor int, currentOrder Order, state int) {
@@ -110,7 +110,7 @@ func SetDisplayUpdates(value bool) {
 	displayUpdates = value
 }
 
-func GetHeartBeat(i int)int{
+func GetHeartBeat(i int) int {
 	return heartbeat[i]
 }
 
@@ -141,17 +141,17 @@ func IncrementElevTickerInfo(elev int) {
 	elevTickerInfo[elev] += 1
 }
 
-func ResetElevTickerInfo(elev int){
+func ResetElevTickerInfo(elev int) {
 	elevTickerInfo[elev] = 0
 }
 
-func IncrementHeartBeat(){
-	for i :=0; i < len(heartbeat); i++ {
+func IncrementHeartBeat() {
+	for i := 0; i < len(heartbeat); i++ {
 		heartbeat[i]++
 	}
 }
 
-func ResetHeartBeat(i int){
+func ResetHeartBeat(i int) {
 	heartbeat[i] = 0
 }
 
@@ -196,13 +196,13 @@ func UpdateFromNetwork(RcvChannel chan Elev, lightsChannel chan<- elevio.PanelLi
 		select {
 		case a := <-RcvChannel:
 			if a.Id != myElevInfo.Id {
-				if checkForReset(a){
+				if checkForReset(a) {
 					resetChannel <- true
 				}
 				updateOtherElevInfo(a)
 				updateOrderList(a, lightsChannel, newOrderChannel)
-			} 
-			
+			}
+
 		}
 	}
 }
@@ -215,21 +215,20 @@ func UpdateMyElevInfo(floor int, order Order, state int) {
 	displayUpdates = true
 }
 
-func RemoveElevFromOtherElevInfo(i int){
-	copy(otherElevInfo[i:], otherElevInfo[i+1:]) // Shift a[i+1:] left one index.
-	otherElevInfo = otherElevInfo[:len(otherElevInfo)-1]     // Truncate slice.
+func RemoveElevFromOtherElevInfo(i int) {
+	copy(otherElevInfo[i:], otherElevInfo[i+1:])         // Shift a[i+1:] left one index.
+	otherElevInfo = otherElevInfo[:len(otherElevInfo)-1] // Truncate slice.
 }
 
-func RemoveElevFromelevTickerInfo(i int){
-	copy(elevTickerInfo[i:], elevTickerInfo[i+1:]) // Shift a[i+1:] left one index.
-	elevTickerInfo = elevTickerInfo[:len(elevTickerInfo)-1]     // Truncate slice.
+func RemoveElevFromelevTickerInfo(i int) {
+	copy(elevTickerInfo[i:], elevTickerInfo[i+1:])          // Shift a[i+1:] left one index.
+	elevTickerInfo = elevTickerInfo[:len(elevTickerInfo)-1] // Truncate slice.
 }
 
-func RemoveHeartbeat(i int){
-	copy(heartbeat[i:], heartbeat[i+1:]) // Shift a[i+1:] left one index.
-	heartbeat = heartbeat[:len(heartbeat)-1]     // Truncate slice.
+func RemoveHeartbeat(i int) {
+	copy(heartbeat[i:], heartbeat[i+1:])     // Shift a[i+1:] left one index.
+	heartbeat = heartbeat[:len(heartbeat)-1] // Truncate slice.
 }
-
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Private functions
@@ -244,24 +243,23 @@ func updateOtherElevInfo(msg Elev) {
 			if otherElevInfo[i].CurrentOrder != msg.CurrentOrder {
 				elevTickerInfo[i] = 0
 			}
-			if !checkForReset(msg){
-
+			if !checkForReset(msg) {
 				otherElevInfo[i].Floor = msg.Floor
 				otherElevInfo[i].CurrentOrder = msg.CurrentOrder
 				otherElevInfo[i].State = msg.State
 				otherElevInfo[i].Orders = msg.Orders
+
 				if bool1 {
 					SetDisplayUpdates(true)
 				}
-			} 
-			
+			}
 
 			return
 		}
 	}
 	elevTickerInfo = append(elevTickerInfo, 0)
 	otherElevInfo = append(otherElevInfo, msg)
-	heartbeat = append(heartbeat,0)
+	heartbeat = append(heartbeat, 0)
 	displayUpdates = true
 }
 
@@ -304,7 +302,7 @@ func initializeMyElevInfo(id int) {
 	myElevInfo.Id = id
 	myElevInfo.Floor = 0
 	myElevInfo.CurrentOrder = Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}
-	myElevInfo.State = 0
+	myElevInfo.State = 1
 	for i := 0; i < numFloors; i++ {
 		for j := 0; j < numButtons; j++ {
 			myElevInfo.Orders[i][j].Floor = i
@@ -317,22 +315,20 @@ func initializeMyElevInfo(id int) {
 	fmt.Println("MyElev initialized")
 }
 
-
-func checkForReset(msg Elev) bool{
+func checkForReset(msg Elev) bool {
 	var orderFloor = myElevInfo.CurrentOrder.Floor
 	var orderButton = myElevInfo.CurrentOrder.ButtonType
-	if orderFloor != -1 && orderButton != -1{
-		if msg.Orders[orderFloor][orderButton].Status == -2{
+	if orderFloor != -1 && orderButton != -1 {
+		if msg.Orders[orderFloor][orderButton].Status == -2 && myElevInfo.State != -2 {
 			myElevInfo.State = -2
 			otherElevInfo = otherElevInfo[:0]
 			elevTickerInfo = elevTickerInfo[:0]
 			fmt.Println("resetting")
 			return true
-		} 
+		}
 	}
 	return false
 }
-
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Dev functions

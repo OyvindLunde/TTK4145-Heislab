@@ -1,7 +1,6 @@
 package elevcontroller
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -26,7 +25,6 @@ func initializeLights(numFloors int) {
 }
 
 func InitializeElevator(numFloors int, port int) {
-	fmt.Println("localhost:" + strconv.Itoa(port))
 	elevio.Init("localhost:"+strconv.Itoa(port), numFloors)
 	//elevio.Init("localhost:15657", numFloors)
 	initializeLights(numFloors)

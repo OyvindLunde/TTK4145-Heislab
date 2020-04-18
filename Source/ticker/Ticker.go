@@ -7,11 +7,11 @@ package ticker
 import (
 	"fmt"
 	"time"
-	"../logmanagement"
+
 	"../elevio"
+	"../logmanagement"
 	"../orderhandler"
 )
-
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Variables
@@ -20,12 +20,11 @@ import (
 var done chan bool
 var ticker *time.Ticker
 
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 /*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
-func StartTicker(tickLength time.Duration, tickTreshold int, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order){
+func StartTicker(tickLength time.Duration, tickTreshold int, lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- logmanagement.Order) {
 	done = make(chan bool)
 	ticker = time.NewTicker(tickLength * time.Second)
 	go checkOnOtherElevs(tickTreshold, lightsChannel, newOrderChannel)
@@ -33,7 +32,7 @@ func StartTicker(tickLength time.Duration, tickTreshold int, lightsChannel chan<
 }
 
 /*Stops ticker*/
-func StoppTicker(){
+func StoppTicker() {
 	ticker.Stop()
 	done <- true
 
@@ -52,21 +51,24 @@ func checkOnOtherElevs(tickTreshold int, lightsChannel chan<- elevio.PanelLight,
 		case <-ticker.C:
 			logmanagement.IncrementHeartBeat()
 			for i := 0; i < len(logmanagement.GetElevTickerInfo()); i++ {
-				
+
 				if logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != -1 && logmanagement.GetOtherElevInfo()[i].CurrentOrder.Status != 0 {
 					logmanagement.IncrementElevTickerInfo(i)
-					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold && len(logmanagement.GetElevTickerInfo()) != 0{
+					if logmanagement.GetElevTickerInfo()[i] >= tickTreshold && len(logmanagement.GetElevTickerInfo()) != 0 {
 						fmt.Println("Timer interrupt")
 						var floor = logmanagement.GetOtherElevInfo()[i].CurrentOrder.Floor
 						var button = logmanagement.GetOtherElevInfo()[i].CurrentOrder.ButtonType
 						logmanagement.SetOrder(floor, button, -2, false, true)
 						time.Sleep(1 * time.Second)
+						logmanagement.SetOrder(floor, button, -1, false, true)
 						logmanagement.RemoveElevFromOtherElevInfo(i)
 						logmanagement.RemoveElevFromelevTickerInfo(i)
 						logmanagement.RemoveHeartbeat(i)
-						logmanagement.SetOrder(floor, button, 0, false, true)
-						order := logmanagement.Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
-						newOrderChannel <- order
+						if button != 2 {
+							logmanagement.SetOrder(floor, button, 0, false, true)
+							order := logmanagement.Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
+							newOrderChannel <- order
+						}
 						orderhandler.CheckForUnconfirmedOrders(lightsChannel, newOrderChannel)
 					}
 				} else if logmanagement.GetHeartBeat(i) > 1 { //burde være dynamisk
