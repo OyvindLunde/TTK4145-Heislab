@@ -49,7 +49,7 @@ var btn_size_y = btnPanel_y / numFloors  // Height of button in the Button Panel
 
 func Display() {
 	driver.Main(func(s screen.Screen) {
-		w, err := s.NewWindow(&screen.NewWindowOptions{
+		w, err := s.NewWindow(&screen.NewWindowOptions{ // Creates a screen of desired size. The chosen width is for 2 elevators
 			Width:  950,
 			Height: 450,
 			Title:  "Elevator Display",
