@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"./communication"
 	"./display"
 	"./elevio"
 	"./fsm"
@@ -39,18 +40,19 @@ func main() {
 		Reset:          make(chan bool),
 	}
 
-	networkChannels := logmanagement.NetworkChannels{
+	networkChannels := communication.NetworkChannels{
 		RcvChannel:   make(chan logmanagement.Elev),
 		BcastChannel: make(chan logmanagement.Elev),
 	}
 
 	fsm.InitFSM(id, addr)
-	logmanagement.InitLogManagement(id)
+	logmanagement.InitLogManagement(id, fsmChannels.ToggleLights, fsmChannels.NewOrder)
 	orderhandler.ReadCabOrderBackup(fsmChannels.ToggleLights, fsmChannels.NewOrder)
 	ticker.StartTicker(tickRate, heartbeatThreshold, tickThreshold)
 
 	go fsm.RunElevator(fsmChannels)
-	go logmanagement.Communication(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder, fsmChannels.Reset)
+	go communication.Transmit(port, networkChannels)
+	go communication.Receive(port, networkChannels, fsmChannels.ToggleLights, fsmChannels.NewOrder, fsmChannels.Reset)
 
 	go display.Display()
 

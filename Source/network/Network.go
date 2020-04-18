@@ -1,7 +1,7 @@
 package network
 
 //--------------------------------------------------------------------------------------
-/*This module conains the functions for sending and recieving messages on the nettwork*/
+/*This module contains the functions for sending and recieving messages on the network*/
 //---------------------------------------------------------------------------------------
 
 import (
@@ -15,12 +15,8 @@ import (
 	"time"
 )
 
-var port string
-var protocol string
-var serverIP string
-
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
-// Nettwork functions
+// Network functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /*JSON decodes message from network and adds message to param channel.*/
@@ -31,15 +27,12 @@ func RecieveMessage(port int, chans ...interface{}) {
 	conn := dialBroadcastUDP(port)
 	for {
 		time.Sleep(2 * time.Millisecond)
-		//fmt.Println("In: Receive msg")
 		n, _, _ := conn.ReadFrom(buf[0:])
 		for _, ch := range chans {
 			T := reflect.TypeOf(ch).Elem()
 			typeName := T.String()
-			//fmt.Printf(typeName)
 			if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
 				v := reflect.New(T)
-
 				json.Unmarshal(buf[len(typeName):n], v.Interface())
 				reflect.Select([]reflect.SelectCase{{
 					Dir:  reflect.SelectSend,
@@ -53,14 +46,11 @@ func RecieveMessage(port int, chans ...interface{}) {
 
 /* JSON encodes and brodcasts message from param channel to the network on param port*/
 func BrodcastMessage(port int, chans ...interface{}) {
-
-	//fmt.Printf("typeName")
 	checkArgs(chans...)
 	n := 0
 	for range chans {
 		n++
 	}
-	//fmt.Println("typeName")
 	selectCases := make([]reflect.SelectCase, n)
 	typeNames := make([]string, n)
 	for i, ch := range chans {
