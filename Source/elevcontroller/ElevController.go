@@ -7,9 +7,6 @@ import (
 	"../elevio"
 )
 
-//var ButtonPress chan elevio.ButtonEvent
-//var FloorReached chan int
-
 func initializeLights(numFloors int) {
 	for i := 0; i < numFloors; i++ {
 		if i != 0 {
@@ -26,30 +23,12 @@ func initializeLights(numFloors int) {
 
 func InitializeElevator(numFloors int, port int) {
 	elevio.Init("localhost:"+strconv.Itoa(port), numFloors)
-	//elevio.Init("localhost:15657", numFloors)
 	initializeLights(numFloors)
 	elevio.SetMotorDirection(elevio.MD_Down)
-	for elevio.GetFloor() != 0 { //Fix getFloor problemet
+	for elevio.GetFloor() != 0 {
 	}
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetFloorIndicator(0)
-
-	/*ButtonPress = make(chan elevio.ButtonEvent)
-	FloorReached = make(chan int)
-
-	go elevio.PollButtons(ButtonPress)
-	go elevio.PollFloorSensor(FloorReached)*/
-}
-
-func FloorIsReached(receiver chan<- int) { // Unused?
-	for {
-		FloorReached := make(chan int)
-		elevio.PollFloorSensor(FloorReached)
-		select {
-		case a := <-FloorReached:
-			receiver <- a
-		}
-	}
 }
 
 func OpenCloseDoor(seconds time.Duration) {

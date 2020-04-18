@@ -227,8 +227,6 @@ func ReadCabOrderBackup(lightsChannel chan<- elevio.PanelLight, newOrderChannel 
 			newOrderChannel <- order
 		}
 	}
-
-	//time.Sleep(1 * time.Second)
 }
 
 func checkError(e error) {

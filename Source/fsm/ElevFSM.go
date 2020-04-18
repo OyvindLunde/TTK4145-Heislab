@@ -116,7 +116,7 @@ func RunElevator(channels FsmChannels) {
 			}
 
 		case RESET:
-			logmanagement.InitLogManagement(_id)
+			logmanagement.InitLogManagement(_id, channels.ToggleLights, channels.NewOrder)
 			elevcontroller.InitializeElevator(logmanagement.GetNumFloors(), address)
 			orderhandler.ReadCabOrderBackup(channels.ToggleLights, channels.NewOrder)
 			floor = 0

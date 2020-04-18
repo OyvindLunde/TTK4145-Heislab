@@ -26,6 +26,7 @@ var _mtx sync.Mutex
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // Public functions
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 /*Starts ticker and check if the other elevators finishes orders within ticklength * tickTreshold seconds*/
 func StartTicker(tickLength time.Duration, heartBeatThreshold int, currentOrderThreshold int) {
 	currentOrderThres = currentOrderThreshold
@@ -38,11 +39,9 @@ func StartTicker(tickLength time.Duration, heartBeatThreshold int, currentOrderT
 	go elevTicker()
 }
 
-/*Stops ticker*/
-func StoppTicker() {
+func StopTicker() {
 	ticker.Stop()
 	done <- true
-
 }
 
 func ResetOrderTicker(id int) {
@@ -103,7 +102,6 @@ func elevTicker() {
 				orderTicker[key]++
 			}
 			_mtx.Unlock()
-
 		}
 	}
 }
