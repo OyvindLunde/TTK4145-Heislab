@@ -249,32 +249,28 @@ func checkOnOtherElevs(lightsChannel chan<- elevio.PanelLight, newOrderChannel c
 			key := otherElevInfo[i].Id
 			value := otherElevInfo[i]
 			if value.CurrentOrder.Status != -1 && value.CurrentOrder.Status != 0 {
-				if ticker.HasCurrentOrderTimedOut(key) && len(otherElevInfo) != 0 {
-
+				if ticker.HasCurrentOrderTimedOut(key) || !ticker.IsElevAlive(key) {
 					fmt.Println("Timer interrupt")
 
 					var floor = value.CurrentOrder.Floor
 					var button = value.CurrentOrder.ButtonType
-					SetOrder(floor, button, -2, false, true)
-					time.Sleep(1000 * time.Millisecond) // We have to give the other elevs time to realise that they've timed out
-
-					SetOrder(floor, button, -1, false, true)
-					RemoveElevFromOtherElevInfo(i)
-					ticker.DeleteElevFromTicker(key)
-					if button != 2 {
-						SetOrder(floor, button, 0, false, true)
-						order := Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
-						newOrderChannel <- order
+					if floor != -1 && button != -1 {
+						SetOrder(floor, button, -2, false, true)
+						time.Sleep(1000 * time.Millisecond) // We have to give the other elevs time to realise that they've timed out
+						if button != 2 {
+							SetOrder(floor, button, 0, false, true)
+							order := Order{Floor: floor, ButtonType: button, Status: 0, Finished: false}
+							newOrderChannel <- order
+						} else {
+							SetOrder(floor, button, -1, false, true)
+						}
 					}
-					checkForUnconfirmedOrders(lightsChannel, newOrderChannel)
-					SetDisplayUpdates(true)
 
-				} else if !ticker.IsElevAlive(key) {
 					RemoveElevFromOtherElevInfo(i)
 					ticker.DeleteElevFromTicker(key)
 					checkForUnconfirmedOrders(lightsChannel, newOrderChannel)
 					SetDisplayUpdates(true)
-					fmt.Println("lost elev ", key)
+
 				}
 			} else {
 				ticker.ResetOrderTicker(key)

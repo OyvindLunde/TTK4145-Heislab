@@ -67,7 +67,7 @@ func StopAtFloor(floor int, lightsChannel chan<- elevio.PanelLight) {
 
 	for i := 0; i < logmanagement.GetNumButtons(); i++ {
 		status := int(logmanagement.GetOrder(floor, i).Status)
-		if status == 0 || status == logmanagement.GetMyElevInfo().Id {
+		if status == 0 || status == logmanagement.GetMyElevInfo().Id || logmanagement.GetOrder(floor, i).Finished == true {
 			UpdateOrder(floor, i, -1, false, false)
 			light := elevio.PanelLight{Floor: floor, Button: elevio.ButtonType(i), Value: false}
 			lightsChannel <- light
