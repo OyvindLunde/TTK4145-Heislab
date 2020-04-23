@@ -136,8 +136,10 @@ func UpdateMyElevInfo(floor int, order Order, state int) {
 }
 
 func RemoveElevFromOtherElevInfo(i int) {
-	copy(otherElevInfo[i:], otherElevInfo[i+1:])         // Shift a[i+1:] left one index.
-	otherElevInfo = otherElevInfo[:len(otherElevInfo)-1] // Truncate slice.
+	if len(otherElevInfo) != 0 {
+		copy(otherElevInfo[i:], otherElevInfo[i+1:])         // Shift a[i+1:] left one index.
+		otherElevInfo = otherElevInfo[:len(otherElevInfo)-1] // Truncate slice.
+	}
 }
 
 func UpdateOtherElevInfo(msg Elev) {
@@ -253,11 +255,11 @@ func checkForUnconfirmedOrders(lightsChannel chan<- elevio.PanelLight, newOrderC
 
 func checkForTimeout(lightsChannel chan<- elevio.PanelLight, newOrderChannel chan<- Order) {
 	for {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 		for i := 0; i < len(otherElevInfo); i++ {
 			key := otherElevInfo[i].Id
 			value := otherElevInfo[i]
-			if value.CurrentOrder.Status != -1 && value.CurrentOrder.Status != 0 {
+			if value.CurrentOrder.Status == -1 {
 				ticker.ResetOrderTicker(key)
 			}
 			if ticker.HasCurrentOrderTimedOut(key) || !ticker.IsElevAlive(key) {
