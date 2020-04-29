@@ -1,9 +1,5 @@
 package display
 
-// TODO:
-// Må ta inn full log (elevInfo og orders) fra de andre heisene for å kunne displaye alt
-// Legges inn i displayOtherElevators. Nice å ha en logList i logmanagement?
-
 import (
 	"fmt"
 	"image"
