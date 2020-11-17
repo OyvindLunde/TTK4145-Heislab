@@ -1,9 +1,7 @@
 # Go Display for n elevators with m floors
 **This module contains functionality for creating a display that shows n elevators with m floors, used in the NTNU course TTK4145 - Real-Time Programming.**
 
-The display was created to make it easier to visualize and debug the system, as the simulator provided by the course is quite tricky to use to check if the elevators are synchronized, e.g. see which orders are active for the different elevators or check whether they register each other orders, and so on. The picture below shows an example of the Display on a running system of 2 elevators with 4 floors.
-
-![Elevator Display](images/ElevatorDisplay_prototype.PNG)
+The display was created to make it easier to visualize and debug the system, as the simulator provided by the course is quite tricky to use to check if the elevators are synchronized, e.g. see which orders are active for the different elevators or check whether they register each other orders, and so on.
 
 ## About the Module
 The core of the module is based around the go package shiny, see https://github.com/golang/exp/tree/master/shiny. The module was created by taking inspiration from the examples provided by Nigeltao at https://github.com/golang/exp/tree/master/shiny/example. Note that the amount of this kind of functionality - as far as my googling skills go - is very sparse for Go, and to my knowledge these are the absolute best examples online. Nigeltaos examples provide a lot more advanced funcionality that can be useful in other projects.
